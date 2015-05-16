@@ -1,0 +1,5 @@
+unattended-os-install
+=====================
+
+A collection of files (e.g. preseed, kickstart, autoyast) for unattended
+installs of various operating systems.
