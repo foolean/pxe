@@ -1,0 +1,204 @@
+#!/bin/bash
+#
+# FILENAME: get_fedora_netboot
+# AUTHOR:   Bennett Samowich <bennett@foolean.org>
+# DATE:     2012-04-19
+#
+# DESCRIPTION:
+#   Download Fedora netboot images.  The script will always download the
+#   current active netboot images.  Running this script from cron(1) will
+#   ensure that your netboot images are always current, including the new
+#   releases as they are made available.
+#
+#   Note: This script will programmatically determine the current, active,
+#         releases.  However; the method uses the 'fullfilelist' file, which
+#         is quite large to do so.  As a result it will take roughly 4 minutes
+#         to get the list of active releases.  This cost, while excessive,
+#         is liveable since the script will mostly be run from cron(1).
+#
+###############################################################################
+
+# Define some variables
+ARCH_LIST="x86_64";     # Placeholder for the list of architectures to download
+RELEASE_LIST="";        # Placeholder for the list of releases to download
+CUSTOM_RELEASE_LIST=0;  # Flag to denote that we have a custom release list
+DEBUG=0;                # Turn on debugging output
+ERROR=0;                # Error flag used during argument processing
+VERBOSE=0;              # Turn on verbose output
+PRUNE=0;                # Prune old releases
+OSNAME="fedora";        # Operating system name
+WGET_VERBOSE="--quiet"; # Placeholder for wget verbosity
+
+# User and group who will own the downloaded image files
+USER="tftp"
+GROUP="tftp"
+
+# List of image related files to download
+IMAGE_FILES="vmlinuz initrd.img"
+
+# Poth to the directory where the netboot files will be stored
+PKGDIR="/srv/tftp/packages"
+
+# Logging macro
+LOGGER="/usr/bin/logger -it \"$(basename $0)\""
+
+# debug - helper routine to print debugging messages
+debug() {
+  if [ "${DEBUG}" -eq 1 ]; then
+      echo "debug: $*"
+  fi
+}
+
+# error - helper routine to print error messages
+error() {
+    ${LOGGER} "error: $*"
+    echo "error: $*"
+}
+
+# notice - helper routine to print informational messages
+notice() {
+  ${LOGGER} "notice: $*"
+  if [ "${VERBOSE}" -eq 1 ]; then
+    echo "notice: $*"
+  fi
+}
+
+# usage - how to use this script
+usage() {
+    echo "Usage: $0 [ OPTIONS ]"
+    echo ""
+    echo "Where:"
+    echo "  -a [ ARCH ]     Architecture to download netboot files for"
+    echo "                  (default: ${ARCH_LIST})"
+    echo "  -d              Print debugging output (includes -v too)"
+    echo "  -g [ GROUP ]    Group that should own the netboot files"
+    echo "                  (default: ${GROUP})"
+    echo "  -h              Print this message"
+    echo "  -o [ OWNER ]    Username that should own the netboot files"
+    echo "                  (default: ${USER})"
+    echo "  -p [ DIR ]      Root path to store the netboot files"
+    echo "                  (default: ${PKGDIR})"
+    echo "  -r [ RELEASE ]  Operating sytem release to download"
+    echo "  -v              Print more verbose output"
+    exit 1
+}
+
+# Parse command-line arguments
+while getopts "a:dhg:r:o:p:Pv" OPTION
+do
+    case $OPTION in
+        a)
+            ARCH_LIST=$(echo $OPTARG | tr '[:upper:]' '[:lower:]');;
+        d)
+            DEBUG=1
+            VERBOSE=1
+            PROGRESS="--progress"
+            ;;
+        g)
+            GROUP=$OPTARG;;
+        o)
+            USER=$OPTARG;;
+        p)
+            PKGDIR=${OPTARG};;
+        P)
+            PRUNE=1;;
+        r)
+            RELEASE_LIST=$(echo $OPTARG | tr '[:upper:]' '[:lower:]')
+            CUSTOM_RELEASE_LIST=1
+            ;;
+        v)
+            VERBOSE=1
+            WGET_VERBOSE="--progress=bar"
+            ;;
+        ?)
+            usage;;
+    esac
+done
+
+# Make sure we have what we need
+if [ "${ARCH_LIST}" == "" ]; then
+    error "Must specify an architecture type (-a)"
+    ERROR=1
+fi
+if [ "${RELEASE_LIST}" == "" ]; then
+    # Get the list of active Fedora releases
+    notice "Getting the list of active releases (this will take some time)"
+    FEDORA_FILE_LIST="http://dl.fedoraproject.org/pub/fedora/fullfilelist"
+    RELEASE_LIST=$(wget -qO - "${FEDORA_FILE_LIST}"                            | \
+        grep "linux/releases/[0-9].*/Server/x86_64/os/images/pxeboot/vmlinuz$" | \
+        cut -f3 -d/ | sort -u | sed -e ':a;N;$!ba;s/\n/ /g')
+fi
+if [ ${ERROR} -eq 1 ]; then
+    usage
+    exit 1;     # Should never get here
+fi
+
+# Debugging output
+debug "ARCH_LIST    = ${ARCH_LIST}" 
+debug "RELEASE_LIST = '${RELEASE_LIST}'"
+debug "USER         = ${USER}"
+debug "GROUP        = ${GROUP}"
+debug "PATH         = ${PKGDIR}"
+debug "VERBOSE      = ${VERBOSE}"
+debug "DEBUG        = ${DEBUG}"
+debug "PRUNE        = ${PRUNE}"
+
+# Ensure our package directory exists
+mkdir -p "${PKGDIR}"
+chmod -R u-w,u+rX,go-rwx "${PKGDIR}"
+
+# Release loop: Iterate over the list of releases
+for RELEASE in ${RELEASE_LIST}
+do
+    debug "Getting netboot images for ${RELEASE}"
+
+    # Architecture loop: Iterate over the list of architectures
+    for ARCH in ${ARCH_LIST}
+    do
+        # Download the image files for this release and architecture
+        debug "Getting netboot images for ${RELEASE} ${ARCH}"
+
+        # Source path to the netboot images
+        IMAGE_SRC="http://dl.fedoraproject.org/pub/fedora/linux/releases/${RELEASE}/Server/${ARCH}/os/images/pxeboot"
+
+        # Destination path for the release images
+        RELEASE_DIR="${PKGDIR}/${OSNAME}/${RELEASE}/${ARCH}"
+
+        # Create the destination directory for the release image
+        debug "Creating '${RELEASE_DIR}'"
+        mkdir -p "${RELEASE_DIR}"
+
+        # Image loop: Iterate over the list of image files
+        for IMAGE_FILE in ${IMAGE_FILES}
+        do
+            debug "Dowloading ${IMAGE_FILE} for ${RELEASE} ${ARCH}"
+        
+            # Download the image file
+            notice "Downloading '${IMAGE_SRC}/${IMAGE_FILE}'"
+            wget "${WGET_VERBOSE}"  \
+                -O "${RELEASE_DIR}/${IMAGE_FILE}" "${IMAGE_SRC}/${IMAGE_FILE}"
+       
+        done;   # Image loop
+    done;   # Architecture loop
+done;   # Release loop
+
+# Set owner and permissions on the directories and files
+chown -R ${USER}:${GROUP}   "${PKGDIR}/${OSNAME}"
+chmod -R go-rwx             "${PKGDIR}/${OSNAME}"
+chmod -R u+rwX              "${PKGDIR}/${OSNAME}"
+
+# Prune directories not part of the current release list
+if [ ${CUSTOM_RELEASE_LIST} -eq 0 ] && [ ${PRUNE} -eq 1 ]; then
+    EOL_RELEASES=$(find "${PKGDIR}/${OSNAME}/"* -type d -prune   \
+                    -exec basename {} \; | sort -u           | \
+                    sed -e ':a;N;$!ba;s/\n/ /g' | sed -e "s/${RELEASE_LIST}//")
+                   
+    debug "EOL_RELEASES = '${EOL_RELEASES}'"
+
+    for EOL_RELEASE in ${EOL_RELEASES}
+    do
+        notice "Cleaning up EOL/EOS release '${EOL_RELEASE}'"
+        rm -rf "${PKGDIR}/${OSNAME}/${EOL_RELEASE}"
+    done
+fi
+
