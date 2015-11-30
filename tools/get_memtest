@@ -1,0 +1,96 @@
+#!/bin/bash
+#
+# FILENAME: get_memtest
+# AUTHOR:   Bennett Samowich <bennett@foolean.org>
+# DATE:     2012-04-19
+#
+# DESCRIPTION:
+#   Download Memtest86+ and extract the image suitable for PXE booting
+#
+###############################################################################
+
+# Define some variables
+DEBUG=0;                # Turn on debugging output
+ERROR=0;                # Error flag used during argument processing
+VERBOSE=0;              # Turn on verbose output
+OSNAME="memtest";       # Operating system name
+
+# User and group who will own the downloaded image files
+USER="tftp"
+GROUP="tftp"
+
+# List of image related files to download
+IMAGE_FILE="dban.bzi"
+
+# Poth to the directory where the netboot files will be stored
+PKGDIR="/srv/tftp/packages"
+
+# Logging macro
+LOGGER="/usr/bin/logger -it \"$(basename $0)\""
+
+# debug - helper routine to print debugging messages
+debug() {
+  if [ "${DEBUG}" -eq 1 ]; then
+      echo "debug: $*"
+  fi
+}
+
+# error - helper routine to print error messages
+error() {
+    ${LOGGER} "error: $*"
+    echo "error: $*"
+}
+
+# notice - helper routine to print informational messages
+notice() {
+  ${LOGGER} "notice: $*"
+  if [ "${VERBOSE}" -eq 1 ]; then
+    echo "notice: $*"
+  fi
+}
+
+# usage - how to use this script
+usage() {
+    echo "Usage: $0"
+    exit 1
+}
+
+# Parse command-line arguments
+while getopts "dhv" OPTION
+do
+    case $OPTION in
+        d) 
+            DEBUG=1;;
+        v) 
+            VERBOSE=1;;
+        ?) 
+            usage;;
+    esac
+done
+
+# Ensure our package directory exists
+mkdir -p "${PKGDIR}"
+chmod -R u-w,u+rX,go-rwx "${PKGDIR}"
+
+# Path to the source
+IMAGE_SRC="http://www.memtest.org/download/4.20/memtest86+-4.20.bin.gz"
+
+# Destination path for the image
+RELEASE_DIR="${PKGDIR}/${OSNAME}"
+
+# Create the destination directory for the release image
+debug "Creating '${RELEASE_DIR}'"
+mkdir -p "${RELEASE_DIR}"
+
+# Download the image
+notice "Downloading Memtest86+"
+wget -q --output-document="${RELEASE_DIR}/memtest86+.gz" "${IMAGE_SRC}"
+
+# Unzip the image
+notice "Unzipping ${RELEASE_DIR}/memtest86+.gz"
+gunzip "${RELEASE_DIR}/memtest86+.gz"
+
+# Set owner and permissions on the directories and files
+chown -R ${USER}:${GROUP}   "${PKGDIR}/${OSNAME}"
+chmod -R go-rwx             "${PKGDIR}/${OSNAME}"
+chmod -R u+rwX              "${PKGDIR}/${OSNAME}"
