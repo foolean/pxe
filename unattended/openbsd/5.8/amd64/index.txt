@@ -1,0 +1,6 @@
+# This is a simple index.txt file that is
+# just enough to help the OpenBSD installer
+# find the siteXX.tgz file
+INSTALL.amd64
+index.txt
+site58.tgz

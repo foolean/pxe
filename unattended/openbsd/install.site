@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+# FILENAME:     install.site
+# AUTHOR:       Bennett Samowich <bennett@foolean.org>
+# DATE:         2015-12-03
+#
+# DESCRIPTION:
+#   OpenBSD custom installation script.  This script will perform some minor
+#   configuration changes and install Puppet.  The premis is that Puppet will
+#   be used to configure the system fully.
+#
+#   You can use the following command to create the siteXX.tgz file, assuming
+#   install.site is to be the only contents (e.g. a generic base install).
+#
+#       cd path-to/install.site
+#       tar cvzf path-to/siteXX.tgz --mode 0755 install.site
+#
+#   Any non-Puppet host specific configurations should be placed in an
+#   install.site file within a siteXX-hostname.tgz tarball.
+#
+###############################################################################
+
+# Set a reasonable PKG_PATH
+export PKG_PATH="http://ftp.openbsd.org/pub/$(uname -s)/$(uname -r)/packages/$(uname -m)"
+
+# See https://code.google.com/p/google-compute-engine/issues/detail?id=77
+echo "ignore classless-static-routes;" >> /etc/dhclient.conf
+
+# Install the packages that we need at a minimum
+echo "Installing puppet"
+pkg_add puppet
+
+# Add PKG_PATH to /root/.profile
+cat << EOF >> /root/.profile
+
+# Set a reasonable PKG_PATH
+export PKG_PATH="http://ftp.openbsd.org/pub/\$(uname -s)/\$(uname -r)/packages/\$(uname -m)"
+EOF
+
+# ... and, we're done.
+echo "$0 finished"
