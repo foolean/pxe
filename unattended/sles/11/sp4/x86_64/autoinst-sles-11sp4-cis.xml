@@ -1,0 +1,1819 @@
+<?xml version="1.0"?>
+<!--
+#
+# FILENAME:     autoinst-sles-11sp4.cfg
+# DATE:         2015-12-06
+# AUTHOR:       Bennett Samowich <bennett@foolean.org>
+#
+# DESCRIPTION:
+#   AutoYast (auto-install) file for SLES 11 SP4.
+#
+#   This autoyast file will install a base SLES system using a partitioning
+#   layout based on the number and size of the disks.
+#
+#   Reference
+#   =========
+#
+#   https://www.suse.com/documentation/sles11/singlehtml/book_autoyast/book_autoyast.html
+#
+#   Usage
+#   =====
+#
+#   Download both the operating system and software development kit from
+#   the SuSE download page: https://www.suse.com/download-linux/.
+#
+#       SLES-11-SP4-DVD-x86_64-GM-DVD1.iso
+#       SLE-11-SP4-SDK-DVD-x86_64-GM-DVD1.iso
+#
+#   Mount or unpack the ISO images into a directory structure and
+#   present it via a web server.
+#
+#   Example:
+#       sles
+#       └── 11
+#           └── sp4
+#               ├── os
+#               │   └── x86_64 <== SLES-11-SP4-DVD-x86_64-GM-DVD1.iso
+#               └── sdk
+#                   └── x86_64 <== SLE-11-SP4-SDK-DVD-x86_64-GM-DVD1.iso
+#
+#   Set 'media_url' below with the URL to where you placed the SDK
+#
+#   PXE Init Arguments
+#   ==================
+#
+#   raidtype    - The RAID type to build (e.g. none, 0, 1, 5, 6, 10)
+#
+#       If raidtype is set to 'none' (the default) then the
+#       first disk will be formatted as a non-RAID, single disk.
+#
+#       NOTE: The /boot partition will always be RAID-1, unless single disk
+#             is selected.  The number of disks and spares used in the /boot
+#             partition will follow the 'raiddisks' and 'raidspares' options.
+#
+#   raiddisks   - The number of active disks to include in the volume
+#
+#   raidspares  - The number of spare disks to include in the volume
+#
+#   The installer itself will throw the error If the requested number of
+#   disks, spares, and raid type can not be fullfilled.
+#
+#   Partition Sizing (smallest disk < 40G)
+#   =======================================
+#   Swap            384(MB)
+#   /               800(MB)
+#   /boot           256(MB)
+#   /home           32(MB)      [ nodev ]
+#   /var            512(MB)
+#   /usr            1280(MB)
+#   /usr/local      256(MB)
+#   /tmp            256(MB)     [ nodev, nosuid, noexec ]
+#   /var/tmp        256(MB)     [ nodev, nosuid, noexec ]
+#   /var/log        1024(MB)
+#   /var/log/audit  1024(MB)
+#
+#   Partition Sizing (smallest disk >= 40G)
+#   =======================================
+#   Swap            4096(MB)
+#   /               896(MB)
+#   /boot           256(MB)
+#   /home           4096(MB)    [ nodev ]
+#   /var            7168(MB)
+#   /usr            4096(MB)
+#   /usr/local      512(MB)
+#   /tmp            4096(MB)    [ nodev, nosuid, noexec ]
+#   /var/tmp        4096(MB)    [ nodev, nosuid, noexec ]
+#   /var/log        8192(MB)
+#   /var/log/audit  8192(MB)
+#
+#   Initial Passwords
+#   =================
+#
+#   The initial root and boot menu password is 'changeme'.
+#
+#   You will be prompted to change the root password at first login.
+#
+#   CIS Benchmark Compliance
+#   ========================
+#
+#   This kickstart attempts to create a CIS compliant system.  The settings
+#   are based on the SLES SP4 Benchmark v1.1.0 document dated 2015-06-03.
+#
+#   [ CIS Benchmark Download ]
+#   https://benchmarks.cisecurity.org/downloads/show-single/?file=suse11.110
+#
+#   A CIS-CAT audit reports the following failures.
+#
+#       2.6 Bind Mount the /var/tmp directory to /tmp
+#
+#       Accepted as compliant:
+#       We create a separate /var/tmp partition instead of bind mounting.
+#
+#       4.5 Activate AppArmor
+#
+#       Accepted as non-compliant
+#       This autoinst does not install apparmor.
+#       
+#       8.2.5 Configure rsyslog to Send Logs to a Remote Log Host
+#
+#       Accepted as non-compliant:
+#       The autoinst does not set the remote host because that would be
+#       handled by configuration management as the exact remote loghost
+#       will vary.
+#
+#       8.3.2 Implement Periodic Execution of File Integrity
+#
+#       Accepted as compliant:
+#       We configure AIDE in /etc/cron.d/aide where the CIS audit tool only
+#       looks in /var/spool/cron/root.
+#
+#       9.2.13 Limit Access via SSH
+#
+#       Accepted as non-compliant:
+#       The autoinst does not set any of the AllowUsers, AllowGroups,
+#       DenyUsers, or DenyGroups options in sshd_config as the exact
+#       lists will vary.
+#
+###############################################################################
+-->
+<!DOCTYPE profile>
+<profile xmlns="http://www.suse.com/1.0/yast2ns" xmlns:config="http://www.suse.com/1.0/configns">
+
+<!-- 4.1: GENERAL OPTIONS -->
+    <general>
+        <ask-list config:type="list"/>
+        <mode>
+            <confirm config:type="boolean">false</confirm>
+            <final_reboot config:type="boolean">true</final_reboot>
+        </mode>
+        <mouse>
+            <id>none</id>
+        </mouse>
+        <proposals config:type="list"/>
+        <signature-handling>
+            <accept_file_without_checksum config:type="boolean">false</accept_file_without_checksum>
+            <accept_non_trusted_gpg_key config:type="boolean">false</accept_non_trusted_gpg_key>
+            <accept_unknown_gpg_key config:type="boolean">false</accept_unknown_gpg_key>
+            <accept_unsigned_file config:type="boolean">false</accept_unsigned_file>
+            <accept_verification_failed config:type="boolean">false</accept_verification_failed>
+            <import_gpg_key config:type="boolean">true</import_gpg_key>
+        </signature-handling>
+        <storage/>
+    </general>
+
+<!-- 4.2:  REPORTING BEHAVIOR -->
+    <report>
+        <errors>
+            <log config:type="boolean">true</log>
+            <show config:type="boolean">true</show>
+            <timeout config:type="integer">0</timeout>
+        </errors>
+        <messages>
+            <log config:type="boolean">true</log>
+            <show config:type="boolean">true</show>
+            <timeout config:type="integer">0</timeout>
+        </messages>
+        <warnings>
+            <log config:type="boolean">true</log>
+            <show config:type="boolean">true</show>
+            <timeout config:type="integer">0</timeout>
+        </warnings>
+        <yesno_messages>
+            <log config:type="boolean">true</log>
+            <show config:type="boolean">true</show>
+            <timeout config:type="integer">0</timeout>
+        </yesno_messages>
+    </report>
+
+<!-- 4.3: BOOT LOADER -->
+    <bootloader>
+        <global>
+            <activate>true</activate>
+            <timeout config:type="integer">5</timeout>
+            <generic_mbr>true</generic_mbr>
+        </global>
+        <loader_type>grub</loader_type>
+    </bootloader>
+
+<!-- 4.4: PARTITIONING -->
+<!--
+# CIS: 2.11 Add nodev Option to Removable Media Partitions (no removable media in fstab post-install)
+# CIS: 2.12 Add noexec Option to Removable Media Partitions (no removable media in fstab post-install)
+# CIS: 2.13 Add nosuid Option to Removable Media Partitions (no removable media in fstab post-install)
+# CIS: 2.17 Set Sticky Bit on All World-Writable Directories (OK: default is compliant)
+-->
+    <partitioning config:type="list">
+        <drive>
+            <device>/dev/vg0</device>
+            <initialize config:type="boolean">true</initialize>
+            <partitions config:type="list">
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext3</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv01</lv_name>
+                    <mount>/</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">131</partition_id>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV01_SZ=</size>
+                </partition>
+<!--
+# CIS: 2.9 Create Separate Partition for /home
+# CIS: 2.10 Add nodev Option to /home
+-->
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext3</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr,nodev</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv02</lv_name>
+                    <mount>/home</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">131</partition_id>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV02_SZ=</size>
+                </partition>
+<!--
+# CIS: 2.5 Create Separate Partition for /var
+-->
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext3</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv03</lv_name>
+                    <mount>/var</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">131</partition_id>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV03_SZ=</size>
+                </partition>
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext3</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv04</lv_name>
+                    <mount>/usr</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">131</partition_id>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV04_SZ=</size>
+                </partition>
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext3</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv05</lv_name>
+                    <mount>/usr/local</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">131</partition_id>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV05_SZ=</size>
+                </partition>
+<!--
+# CIS: 2.1 Create Separate Partition for /tmp
+# CIS: 2.2 Set nodev option for /tmp Partition
+# CIS: 2.3 Set nosuid option for /tmp Partition
+# CIS: 2.4 Set noexec option for /tmp Partition
+-->
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext3</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr,nodev,nosuid,noexec</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv06</lv_name>
+                    <mount>/tmp</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">131</partition_id>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV06_SZ=</size>
+                </partition>
+<!--
+# CIS: 2.6 Bind Mount the /var/tmp directory to /tmp (we create a separate /var/tmp directory instead)
+# CIS: 2.2 Set nodev option for /tmp Partition (we'll do the same for /var/tmp)
+# CIS: 2.3 Set nosuid option for /tmp Partition (we'll do the same for /var/tmp)
+# CIS: 2.4 Set noexec option for /tmp Partition (we'll do the same for /var/tmp)
+-->
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext3</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr,nodev,nosuid,noexec</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv07</lv_name>
+                    <mount>/var/tmp</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">131</partition_id>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV07_SZ=</size>
+                </partition>
+<!--
+# CIS: 2.7 Create Separate Partition for /var/log
+-->
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext3</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv08</lv_name>
+                    <mount>/var/log</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">131</partition_id>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV08_SZ=</size>
+                </partition>
+<!--
+# CIS: 2.8 Create Separate Partition for /var/log/audit
+-->
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext3</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv09</lv_name>
+                    <mount>/var/log/audit</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">131</partition_id>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV09_SZ=</size>
+                </partition>
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">swap</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>defaults</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>swap</lv_name>
+                    <mount>swap</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">130</partition_id>
+                    <resize config:type="boolean">false</resize>
+                    <size>=SWAP_SZ=</size>
+                </partition>
+            </partitions>
+            <pesize>4M</pesize>
+            <type config:type="symbol">CT_LVM</type>
+            <use>all</use>
+        </drive>
+    </partitioning>
+
+<!-- 4.5: SOFTWARE -->
+    <software>
+        <patterns config:type="list">
+            <pattern>Minimal</pattern>
+            <pattern>base</pattern>
+        </patterns>
+
+<!--
+# CIS: 7.4.1 Install TCP Wrappers
+# CIS: 8.2.1 Install the rsyslog package
+# CIS: 8.3.1 Install AIDE
+-->
+        <packages  config:type="list">
+            <package>aide</package>
+            <package>mercurial</package>
+            <package>rsyslog</package>
+            <package>tcpd</package>
+            <package>zypp-plugin-python</package>
+<!--
+# CIS: 4.5 Activate AppArmor
+            <package>libapparmor</package>
+            <package>apparmor-profiles</package>
+            <package>apparmor-utils</package>
+            <package>apparmor-parser</package>
+            <package>yast2-apparmor</package>
+            <package>apparmor-docs</package>
+-->
+        </packages>
+
+<!--
+# CIS: 5.1.1 Ensure NIS Server is not enabled (OK: not installed)
+# CIS: 5.1.2 Ensure NIS Client is not installed
+# CIS: 5.1.3 Ensure rsh server is not enabled
+# CIS: 5.1.4 Ensure rsh client is not installed
+# CIS: 5.1.5 Ensure talk server is not enabled
+# CIS: 5.1.6 Ensure talk client is not installed
+# CIS: 5.1.7 Ensure telnet server is not enabled
+# CIS: 5.1.8 Ensure tftp-server is not enabled
+# CIS: 5.1.9 Ensure xinetd is not enabled
+# CIS: 6.1 Ensure X Windows is not installed
+# CIS: 6.4 Ensure DHCP Server is not enabled
+# CIS: 6.6 Ensure LDAP is not enabled
+# CIS: 6.8 Ensure DNS Server is not enabled
+# CIS: 6.9 Ensure FTP Server is not enabled
+# CIS: 6.10 Ensure HTTP Server is not enabled
+# CIS: 6.11 Ensure IMAP and POP server is not enabled
+# CIS: 6.12 Ensure Samba is not enabled
+# CIS: 6.13 Ensure HTTP Proxy Server is not enabled
+# CIS: 6.14 Ensure SNMP Server is not enabled
+# CIS: 6.17 Ensure Biosdevname is not enabled
+-->
+        <remove-packages config:type="list">
+            <package>Mesa</package>
+            <package>apache2</package>
+            <package>bind</package>
+            <package>biosdevname</package>
+            <package>cyrus</package>
+            <package>dhcp-server</package>
+            <package>fonts-config</package>
+            <package>ft2demos</package>
+            <package>libasound2</package>
+            <package>libdrm</package>
+            <package>libmysqlclient_r15</package>
+            <package>libpciaccess0</package>
+            <package>libqt4</package>
+            <package>libqt4-qt3support</package>
+            <package>libqt4-sql</package>
+            <package>libqt4-sql-mysql</package>
+            <package>libqt4-sql-sqlite</package>
+            <package>libqt4-x11</package>
+            <package>net-snmp</package>
+            <package>openldap2</package>
+<!--            <package>openldap2-client</package> -->
+            <package>pcmciautils</package>
+            <package>portmap</package>
+            <package>rpcbind</package>
+            <package>rsh</package>
+            <package>rsh-server</package>
+            <package>samba</package>
+            <package>sendmail</package>
+            <package>squid</package>
+            <package>squid3</package>
+            <package>syslog-ng</package>
+            <package>talk</package>
+            <package>talk-server</package>
+            <package>telnet-server</package>
+            <package>tftp</package>
+            <package>atftp</package>
+            <package>vsftpd</package>
+            <package>xinetd</package>
+            <package>xorg-11</package>
+            <package>xorg-x11-fonts</package>
+            <package>xorg-x11-fonts-core</package>
+            <package>yast2-qt</package>
+            <package>yast2-qt-pkg</package>
+            <package>ypbind</package>
+            <package>ypserv</package>
+        </remove-packages>
+    </software>
+
+<!-- 4.5.3: INSTALLING ADDITIONAL AND CUSTOMIZED PACKAGES -->
+    <add-on>
+      <add_on_products config:type="list">
+        <listentry>
+            <media_url>http://replace-with-your-url-here</media_url>
+            <product>SUSE Linux Enterprise Server 11 SP4 SDK</product>
+            <product_dir>/</product_dir>
+            <ask_on_error config:type="boolean">false</ask_on_error>
+            <name>SUSE Linux Enterprise Server 11 SP4 SDK</name> 
+            <import_gpg_key config:type="boolean">true</import_gpg_key>
+        </listentry>
+      </add_on_products>
+    </add-on>
+
+<!-- 4.6: RUN LEVELS -->
+    <runlevel>
+        <default>3</default>
+        <services config:type="list" >
+            <service>
+                <service_name>postfix</service_name>
+                <service_status>disable</service_status>
+            </service>
+            <service>
+                <service_name>sshd</service_name>
+                <service_status>disable</service_status>
+            </service>
+        </services>
+    </runlevel>
+
+<!-- 4.7: NETWORKING -->
+    <networking>
+        <keep_install_network config:type="boolean">true</keep_install_network>
+        <routing>
+            <ip_forward config:type="boolean">false</ip_forward>
+        </routing>
+    </networking>
+
+<!-- 4.7.2: PROXY -->
+    <proxy>
+        <enabled config:type="boolean">false</enabled>
+        <ftp_proxy></ftp_proxy>
+        <http_proxy></http_proxy>
+        <https_proxy></https_proxy>
+        <no_proxy>localhost, 127.0.0.1</no_proxy>
+        <proxy_password></proxy_password>
+        <proxy_user></proxy_user>
+    </proxy>
+
+<!-- 4.9: LDAP CLIENT -->
+    <ldap>
+        <base_config_dn></base_config_dn>
+        <bind_dn></bind_dn>
+        <create_ldap config:type="boolean">false</create_ldap>
+        <file_server config:type="boolean">false</file_server>
+        <ldap_domain>dc=example,dc=com</ldap_domain>
+        <ldap_server>127.0.0.1</ldap_server>
+        <ldap_tls config:type="boolean">true</ldap_tls>
+        <ldap_v2 config:type="boolean">false</ldap_v2>
+        <login_enabled config:type="boolean">true</login_enabled>
+            <member_attribute>member</member_attribute>
+        <mkhomedir config:type="boolean">false</mkhomedir>
+        <pam_password>exop</pam_password>
+        <sssd config:type="boolean">false</sssd>
+        <start_autofs config:type="boolean">false</start_autofs>
+        <start_ldap config:type="boolean">false</start_ldap>
+    </ldap>
+
+<!-- 4.10: NFS CLIENT AND SERVER -->
+    <!--
+    <nfs>
+        <enable_nfs4 config:type="boolean">false</enable_nfs4>
+    </nfs>
+    -->
+
+<!-- 4.13: SECURITY SETTINGS -->
+
+<!-- 4.13.3: LOGIN SETTINGS -->
+    <login_settings/>
+
+<!-- 4.15: USERS -->
+    <users config:type="list">
+        <user>
+            <encrypted config:type="boolean">false</encrypted>
+            <fullname>root</fullname>
+            <gid>0</gid>
+            <home>/root</home>
+            <password_settings>
+                <expire></expire>
+                <flag></flag>
+                <inact></inact>
+                <max></max>
+                <min></min>
+                <warn></warn>
+            </password_settings>
+            <shell>/bin/bash</shell>
+            <uid>0</uid>
+            <user_password>changeme</user_password>
+            <username>root</username>
+        </user>
+    </users>
+
+<!-- 4.16: CUSTOM USER SCRIPTS -->
+    <scripts>
+    <!-- 4.15.1: PRE-INSTALL SCRIPTS -->
+        <pre-scripts config:type="list">
+            <script>
+                <filename>pre.sh</filename>
+                <interpreter>shell</interpreter>
+                <source>
+                    <![CDATA[#!/bin/bash
+
+# Get any kernel options and convert them to environment variables
+set -- $(cat /proc/cmdline)
+for I in $*; do case "$I" in *=*) eval $I;; esac; done
+
+# Create a file that contains the autoyast URL as well as git,
+# sha1, and sha256 hashes into the resulting image.  The purpose
+# of which is to provide the ability to show when and how the
+# system was built.
+cat << EOF >> /tmp/tag-install.sh
+#!/bin/sh
+
+while [ ! -d /mnt/etc ]
+do
+    sleep 5
+done
+wget -qO /tmp/autoyast.xml "${autoyast}"
+(   echo "date:    $(date)"
+    echo ""
+    echo "autoyast: ${autoyast}"
+    echo "git-sha:  \$((printf "blob \$(ls -l /tmp/autoyast.xml | awk '{print \$5}')\0"; cat /tmp/autoyast.xml) | sha1sum | awk '{print \$1}')"
+    echo "sha1:     \$(sha1sum /tmp/autoyast.xml | awk '{print \$1}')"
+    echo ""
+    echo "Debugging:"
+    echo "  raidtype   = '\${raidtype}'"
+    echo "  raiddisks  = '\${raiddisks}'"
+    echo "  raidspares = '\${raidspares}'"
+) > /mnt/etc/build-info
+chmod 0000 /mnt/etc/build-info
+EOF
+chmod 700 /tmp/tag-install.sh
+/bin/sh /tmp/tag-install.sh > /dev/null 2>&1 < /dev/null &
+
+# Default partition sizes
+BOOT_SZ=256
+SWAP_SZ=4096
+LV01_SZ=896
+LV02_SZ=4096
+LV03_SZ=7168
+LV04_SZ=4096
+LV05_SZ=512
+LV06_SZ=4096
+LV07_SZ=4096
+LV08_SZ=8192
+LV09_SZ=8192
+
+# Get the list of phsyical disks in the system
+DISK_LIST=$(lsblk -io NAME | grep "^[a-z]" | \
+            egrep -v "^(loop|sr|fd)" | sort -u);
+
+# Get the smallest disk size
+SMALLEST_DISK=$(
+    ( for DISK in ${DISK_LIST}
+      do
+          fdisk -l "/dev/${DISK}"   | \
+              grep "^Disk .* bytes" | \
+              cut -f5 -d\ ;
+      done
+    ) | sort -un | head -n1
+)
+
+# Use a smaller layout if the disk is smaller than 40G
+if [ ${SMALLEST_DISK} -lt 40000000000 ]; then
+    SWAP_SZ=384
+    LV01_SZ=800
+    LV02_SZ=32
+    LV03_SZ=512
+    LV04_SZ=1280
+    LV05_SZ=256
+    LV06_SZ=256
+    LV07_SZ=256
+    LV08_SZ=1024
+    LV09_SZ=1024
+fi
+
+DISKS=$(echo "${DISK_LIST}" | wc -l)
+RAID_TYPE="none"
+RAID_DISKS="${DISKS}"
+RAID_SPARES="0"
+
+if [ "${raidtype}" == "none" ]; then
+    raiddisks=1;
+fi
+if [ "${raidtype}" != "" ]; then
+    RAID_TYPE="${raidtype}"
+fi
+if [ "${raiddisks}" != "" ]; then
+    RAID_DISKS="${raiddisks}"
+fi
+if [ "${raidspares}" != "" ]; then
+    RAID_SPARES="${raidspares}"
+fi
+RAID_TOTAL=$(( ${RAID_DISKS} + ${RAID_SPARES} ))
+XML_FILE="/tmp/physical-layout.xml"
+
+if [ "${RAID_TOTAL}" == "1" ]; then
+    cat << RAID_1_EOF > "${XML_FILE}"
+        <!-- single drive configuration (RAID_TOTAL = ${RAID_TOTAL}) -->
+        <drive>
+            <initialize config:type="boolean">true</initialize>
+            <partitions config:type="list">
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext3</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <mount>/boot</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">131</partition_id>
+                    <partition_nr config:type="integer">1</partition_nr>
+                    <resize config:type="boolean">false</resize>
+                    <size>${BOOT_SZ}M</size>
+                </partition>
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext3</filesystem>
+                    <format config:type="boolean">false</format>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lvm_group>vg0</lvm_group>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">142</partition_id>
+                    <partition_nr config:type="integer">2</partition_nr>
+                    <resize config:type="boolean">false</resize>
+                    <size>max</size>
+                </partition>
+            </partitions>
+            <pesize></pesize>
+            <type config:type="symbol">CT_DISK</type>
+            <use>all</use>
+        </drive>
+RAID_1_EOF
+else
+    cat << RAID_MD_PART1_EOF >> "${XML_FILE}"
+        <!-- multiple drive configuration (RAID_TOTAL = ${RAID_TOTAL}) -->
+    <drive>
+      <device>/dev/md</device>
+      <initialize config:type="boolean">true</initialize>
+      <partitions config:type="list">
+        <partition>
+          <create config:type="boolean">true</create>
+          <crypt_fs config:type="boolean">false</crypt_fs>
+          <filesystem config:type="symbol">ext3</filesystem>
+          <format config:type="boolean">true</format>
+          <loop_fs config:type="boolean">false</loop_fs>
+          <mount>/boot</mount>
+          <mountby config:type="symbol">device</mountby>
+          <partition_id config:type="integer">142</partition_id>
+          <partition_nr config:type="integer">0</partition_nr>
+          <raid_options>
+            <device_order config:type="list">
+RAID_MD_PART1_EOF
+    for DISK in $(echo "${DISK_LIST}" | head -n ${RAID_TOTAL}); do
+echo "              <listentry>/dev/${DISK}1</listentry>" >> "${XML_FILE}"
+    done
+    cat << RAID_MD_PART2_EOF >> "${XML_FILE}"
+            </device_order>
+            <persistent_superblock config:type="boolean">false</persistent_superblock>
+            <raid_type>raid1</raid_type>
+          </raid_options>
+          <resize config:type="boolean">false</resize>
+        </partition>
+        <partition>
+          <create config:type="boolean">true</create>
+          <crypt_fs config:type="boolean">false</crypt_fs>
+          <filesystem config:type="symbol">ext3</filesystem>
+          <format config:type="boolean">false</format>
+          <loop_fs config:type="boolean">false</loop_fs>
+          <lvm_group>vg0</lvm_group>
+          <mountby config:type="symbol">device</mountby>
+          <partition_id config:type="integer">142</partition_id>
+          <partition_nr config:type="integer">1</partition_nr>
+          <raid_options>
+            <device_order config:type="list">
+RAID_MD_PART2_EOF
+    for DISK in $(echo "${DISK_LIST}" | head -n ${RAID_TOTAL}); do
+echo "              <listentry>/dev/${DISK}2</listentry>" >> "${XML_FILE}"
+    done
+    cat << RAID_MD_PART3_EOF >> "${XML_FILE}"
+            </device_order>
+            <persistent_superblock config:type="boolean">false</persistent_superblock>
+            <raid_type>raid${RAID_TYPE}</raid_type>
+          </raid_options>
+          <resize config:type="boolean">false</resize>
+        </partition>
+      </partitions>
+      <pesize></pesize>
+      <type config:type="symbol">CT_MD</type>
+      <use>all</use>
+    </drive>
+RAID_MD_PART3_EOF
+
+    for DISK in $(echo "${DISK_LIST}" | head -n ${RAID_TOTAL}); do
+        cat << RAID_DISK_EOF >> "${XML_FILE}"
+    <drive>
+      <device>/dev/${DISK}</device>
+      <initialize config:type="boolean">true</initialize>
+      <partitions config:type="list">
+        <partition>
+          <create config:type="boolean">true</create>
+          <crypt_fs config:type="boolean">false</crypt_fs>
+          <filesystem config:type="symbol">ext3</filesystem>
+          <format config:type="boolean">false</format>
+          <loop_fs config:type="boolean">false</loop_fs>
+          <mountby config:type="symbol">device</mountby>
+          <partition_id config:type="integer">253</partition_id>
+          <partition_nr config:type="integer">1</partition_nr>
+          <raid_name>/dev/md0</raid_name>
+          <raid_type>raid1</raid_type>
+          <resize config:type="boolean">false</resize>
+          <size>${BOOT_SZ}M</size>
+        </partition>
+        <partition>
+          <create config:type="boolean">true</create>
+          <crypt_fs config:type="boolean">false</crypt_fs>
+          <filesystem config:type="symbol">ext3</filesystem>
+          <format config:type="boolean">false</format>
+          <loop_fs config:type="boolean">false</loop_fs>
+          <mountby config:type="symbol">device</mountby>
+          <partition_id config:type="integer">253</partition_id>
+          <partition_nr config:type="integer">2</partition_nr>
+          <raid_name>/dev/md1</raid_name>
+          <raid_type>raid${RAID_TYPE}</raid_type>
+          <resize config:type="boolean">false</resize>
+          <size>max</size>
+        </partition>
+      </partitions>
+      <pesize></pesize>
+      <type config:type="symbol">CT_DISK</type>
+      <use>all</use>
+    </drive>
+RAID_DISK_EOF
+    done
+fi
+
+# Make the necessary changes to the autoinst file, saving
+# them in /tmp/profile/modified.xml
+cat /tmp/profile/autoinst.xml       | \
+    sed -e "s/=LV01_SZ=/${LV01_SZ}M/g" \
+        -e "s/=LV02_SZ=/${LV02_SZ}M/g" \
+        -e "s/=LV03_SZ=/${LV03_SZ}M/g" \
+        -e "s/=LV04_SZ=/${LV04_SZ}M/g" \
+        -e "s/=LV05_SZ=/${LV05_SZ}M/g" \
+        -e "s/=LV06_SZ=/${LV06_SZ}M/g" \
+        -e "s/=LV07_SZ=/${LV07_SZ}M/g" \
+        -e "s/=LV08_SZ=/${LV08_SZ}M/g" \
+        -e "s/=LV09_SZ=/${LV09_SZ}M/g" \
+        -e "s/=SWAP_SZ=/${SWAP_SZ}M/g" \
+        -e '/^  <partitioning config:type="list">/ {
+            r /tmp/physical-layout.xml
+        }' > /tmp/profile/modified.xml
+                    ]]>
+                </source>
+            </script>
+        </pre-scripts>
+
+    <!-- 4.16.3 CHROOT-ENVIRONMENT SCRIPTS -->
+        <chroot-scripts config:type="list">
+            <script>
+                <filename>copy-resolv-conf.sh</filename>
+                <interpreter>shell</interpreter>
+                <debug config:type="boolean">true</debug>
+                <chrooted config:type="boolean">false</chrooted>
+                <source>
+                    <![CDATA[#!/bin/bash
+# Copy resolv.conf into the image.  We need this so
+# the chrooted 'zypper addrepo' will succeed
+cp /etc/resolv.conf /mnt/etc/resolv.conf
+                    ]]>
+                </source>
+            </script>
+            <script>
+                <filename>chroot.sh</filename>
+                <interpreter>shell</interpreter>
+                <debug config:type="boolean">true</debug>
+                <chrooted config:type="boolean">true</chrooted>
+                <source>
+                    <![CDATA[#!/bin/bash
+
+# Import the repo definition
+zypper addrepo http://download.opensuse.org/repositories/devel:/tools:/scm/SLE_11_SP4/devel:tools:scm.repo
+
+# Import the GPG key
+rpm --import http://download.opensuse.org/repositories/devel:/tools:/scm/SLE_11_SP4//repodata/repomd.xml.key
+
+# Install etckeeper
+zypper install --no-recommends -y etckeeper
+zypper install --no-recommends -y etckeeper-cron
+zypper install --no-recommends -y etckeeper-zypp-plugin
+
+# Disable the repo
+zypper modifyrepo -d devel_tools_scm
+                    ]]>
+                </source>
+            </script>
+        </chroot-scripts>
+         
+    <!-- 4.16.4: POST-INSTALL SCRIPTS -->
+        <post-scripts config:type="list">
+            <script>
+                <filename>post-install.sh</filename>
+                <interpreter>shell</interpreter>
+                <debug config:type="boolean">true</debug>
+                <source>
+                    <![CDATA[#!/bin/bash
+
+# Fixup etckeeper
+if [ -f /etc/etckeeper/etckeeper.conf ]
+then
+    cp /etc/etckeeper/etckeeper.conf /etc/etckeeper/etckeeper.conf.orig
+    ( cat /etc/etckeeper/etckeeper.conf | \
+      sed -e 's/^#VCS=\"hg\"/VCS=\"hg\"/'  \
+          -e 's/^VCS=git/#VCS=\"git\"/'
+    ) > /etc/etckeeper/etckeeper.conf.new
+    mv /etc/etckeeper/etckeeper.conf.new /etc/etckeeper/etckeeper.conf
+    etckeeper init
+    etckeeper commit "Initial commit of base system"
+fi
+
+# CIS: 2.14 Add nodev Option to /dev/shm Partition
+# CIS: 2.15 Add nosuid Option to /dev/shm Partition
+# CIS: 2.16 Add noexec Option to /dev/shm Partition
+sed -i 's/^tmpfs.*\/dev\/shm.*defaults.*//' /etc/fstab
+cat << EOF >> /etc/fstab
+
+# CIS: 2.14 Add nodev Option to /dev/shm Partition
+# CIS: 2.15 Add nosuid Option to /dev/shm Partition
+# CIS: 2.16 Add noexec Option to /dev/shm Partition
+tmpfs                  /dev/shm                tmpfs   nodev,nosuid,noexec 0 0
+EOF
+etckeeper commit "CIS: 2.14-16 Add nodev,nosuid,noexec Option to /dev/shm Partition"
+
+# CIS: 2.18 Disable Mounting of cramfs Filesystems
+cat << EOF >> /etc/modprobe.d/CIS.conf
+
+# CIS: 2.18 Disable Mounting of cramfs Filesystems
+install cramfs /bin/true
+EOF
+etckeeper commit "CIS: 2.18 Disable Mounting of cramfs Filesystems"
+
+# CIS: 2.19 Disable Mounting of freevxfs Filesystems
+cat << EOF >> /etc/modprobe.d/CIS.conf
+
+# CIS: 2.19 Disable Mounting of freevxfs Filesystems
+install freevxfs /bin/true
+EOF
+etckeeper commit "CIS: 2.19 Disable Mounting of freevxfs Filesystems"
+
+# CIS: 2.20 Disable Mounting of jffs2 Filesystems
+cat << EOF >> /etc/modprobe.d/CIS.conf
+
+# CIS: 2.20 Disable Mounting of jffs2 Filesystems
+install jffs2 /bin/true
+EOF
+etckeeper commit "CIS: 2.20 Disable Mounting of jffs2 Filesystems"
+
+# CIS: 2.21 Disable Mounting of hfs Filesystems
+cat << EOF >> /etc/modprobe.d/CIS.conf
+
+# CIS: 2.21 Disable Mounting of hfs Filesystems
+install hfs /bin/true
+EOF
+etckeeper commit "CIS: 2.21 Disable Mounting of hfs Filesystems"
+
+# CIS: 2.22 Disable Mounting of hfsplus Filesystems
+cat << EOF >> /etc/modprobe.d/CIS.conf
+
+# CIS: 2.22 Disable Mounting of hfsplus Filesystems
+install hfsplus /bin/true
+EOF
+etckeeper commit "CIS: 2.22 Disable Mounting of hfsplus Filesystems"
+
+# CIS: 2.23 Disable Mounting of squashfs Filesystems
+cat << EOF >> /etc/modprobe.d/CIS.conf
+
+# CIS: 2.23 Disable Mounting of squashfs Filesystems
+install squashfs /bin/true
+EOF
+etckeeper commit "CIS: 2.23 Disable Mounting of squashfs Filesystems"
+
+# CIS: 2.24 Disable Mounting of udf Filesystems
+cat << EOF >> /etc/modprobe.d/CIS.conf
+
+# CIS: 2.24 Disable Mounting of udf Filesystems
+install udf /bin/true
+EOF
+etckeeper commit "CIS: 2.24 Disable Mounting of udf Filesystems"
+
+# CIS: 2.25 Disable Automounting
+chkconfig autofs off
+etckeeper commit "CIS: 2.25 Disable Automounting"
+
+# CIS: 3.1 Set User/Group Owner on bootloader config
+chown root:root /boot/grub/menu.lst
+etckeeper commit "CIS: 3.1 Set User/Group Owner on bootloader config"
+
+# CIS: 3.2 Set Permissions on bootloader config
+chmod 600 /boot/grub/menu.lst
+etckeeper commit "CIS: 3.2 Set Permissions on bootloader config"
+
+# CIS: 3.3 Set Boot Loader Password
+PW=$(echo -n "changeme" | openssl passwd -1 -stdin | sed -e 's/\//\\\//')
+sed -i "s/^\(timeout.*\)/\1\npassword --md5 ${PW}/" /boot/grub/menu.lst
+
+# CIS: 3.4 Require Authentication for Single-User Mode (OK: default is compliant)
+
+# CIS: 3.5 Disable Interactive Boot (OK: default is compliant)
+
+# CIS: 4.1 Restrict Core Dumps
+cat << EOF >> /etc/security/limits.conf
+
+# CIS: 4.1 Restrict Core Dumps
+* hard core 0
+EOF
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 4.1 Restrict Core Dumps
+fs.suid_dumpable=0
+EOF
+etckeeper commit "CIS: 4.1 Restrict Core Dumps"
+
+# CIS: 4.2 Enable XD/NX Support on 32-bit x86 Systems (OK: n/a for x86_64)
+
+# CIS: 4.3 Enable Randomized Virtual Memory Region Placement
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 4.3 Enable Randomized Virtual Memory Region Placement
+kernel.randomize_va_space = 2
+EOF
+etckeeper commit "CIS: 4.3 Enable Randomized Virtual Memory Region Placement"
+
+# CIS: 4.4 Disable Prelink
+if [ -f /usr/sbin/prelink ]
+then
+    /usr/sbin/prelink -ua
+    zypper remove -y prelink
+fi
+etckeeper commit "CIS: 4.4 Disable Prelink"
+
+# CIS: 4.5 Activate AppArmor (NOT COMPLIANT: TO-DO)
+
+# CIS: 5.2 Ensure chargen-udp is not enabled
+chkconfig chargen-udp off
+etckeeper commit "CIS: 5.2 Ensure chargen-udp is not enabled"
+
+# CIS: 5.3 Ensure chargen is not enabled
+chkconfig chargen off
+etckeeper commit "CIS: 5.3 Ensure chargen is not enabled"
+
+# CIS: 5.4 Ensure daytime-udp is not enabled
+chkconfig daytime-udp off
+etckeeper commit "CIS: 5.4 Ensure daytime-udp is not enabled"
+
+# CIS: 5.5 Ensure daytime is not enabled
+chkconfig daytime off
+etckeeper commit "CIS: 5.5 Ensure daytime is not enabled"
+
+# CIS: 5.6 Ensure echo-udp is not enabled
+chkconfig echo-udp off
+etckeeper commit "CIS: 5.6 Ensure echo-udp is not enabled"
+
+# CIS: 5.7 Ensure echo is not enabled
+chkconfig echo off
+etckeeper commit "CIS: 5.7 Ensure echo is not enabled"
+
+# CIS: 5.8 Ensure discard-udp is not enabled
+chkconfig discard-udp off
+etckeeper commit "CIS: 5.8 Ensure discard-udp is not enabled"
+
+# CIS: 5.9 Ensure discard is not enabled
+chkconfig discard off
+etckeeper commit "CIS: 5.9 Ensure discard is not enabled"
+
+# CIS: 5.10 Ensure time-udp is not enabled
+chkconfig time-udp off
+etckeeper commit "CIS: 5.10 Ensure time-udp is not enabled"
+
+# CIS: 5.11 Ensure time is not enabled
+chkconfig time off
+etckeeper commit "CIS: 5.11 Ensure time is not enabled"
+
+# CIS: 6.2 Ensure Avahi Server is not enabled
+chkconfig avahi-daemon off
+sed -i 's/^LINKLOCAL_INTERFACES.*/LINKLOCAL_INTERFACES=""/' /etc/sysconfig/network/config
+etckeeper commit "CIS: 6.2 Ensure Avahi Server is not enabled"
+
+# CIS: 6.3 Ensure print server is not enabled
+chkconfig cups off
+etckeeper commit "CIS: 6.3 Ensure print server is not enabled"
+
+# CIS: 6.5 Configure Network Time Protocol (NTP)
+cat << EOF >> /etc/ntp.conf
+
+# CIS: 6.5 Configure Network Time Protocol (NTP)
+restrict default kod nomodify notrap nopeer noquery
+restrict -6 default kod nomodify notrap nopeer noquery
+
+server 0.pool.ntp.org
+server 1.pool.ntp.org
+server 2.pool.ntp.org
+server 3.pool.ntp.org
+EOF
+etckeeper commit "CIS: 6.5 Configure Network Time Protocol (NTP)"
+
+# CIS: 6.6 Ensure LDAP is not enabled (NOT COMPLIANT: openldap2-client is required by other needed packages (e.g. ntp))
+
+# CIS: 6.7 Ensure NFS and RPC are not enabled
+chkconfig nfs off
+chkconfig rpcbind off
+etckeeper commit "CIS: 6.7 Ensure NFS and RPC are not enabled"
+
+# CIS: 6.15 Configure Mail Transfer Agent for Local-Only Mode (OK: default is compliant)
+
+# CIS: 6.16 Ensure rsync service is not enabled
+chkconfig rsyncd off
+etckeeper commit "CIS: 6.16 Ensure rsync service is not enabled"
+
+# CIS: 7.1.1 Disable IP Forwarding
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 7.1.1 Disable IP Forwarding
+net.ipv4.ip_forward=0
+EOF
+etckeeper commit "CIS: 7.1.1 Disable IP Forwarding"
+
+# CIS: 7.1.2 Disable Send Packet Redirects
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 7.1.2 Disable Send Packet Redirects
+net.ipv4.conf.all.send_redirects=0
+net.ipv4.conf.default.send_redirects=0
+EOF
+etckeeper commit "CIS: 7.1.2 Disable Send Packet Redirects"
+
+# CIS: 7.2.1 Disable Source Routed Packet Acceptance
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 7.2.1 Disable Source Routed Packet Acceptance
+net.ipv4.conf.all.accept_source_route=0
+net.ipv4.conf.default.accept_source_route=0
+EOF
+etckeeper commit "CIS: 7.2.1 Disable Source Routed Packet Acceptance"
+
+# CIS: 7.2.2 Disable ICMP Redirect Acceptance
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 7.2.2 Disable ICMP Redirect Acceptance
+net.ipv4.conf.all.accept_redirects=0
+net.ipv4.conf.default.accept_redirects=0
+EOF
+etckeeper commit "CIS: 7.2.2 Disable ICMP Redirect Acceptance"
+
+# CIS: 7.2.3 Disable Secure ICMP Redirect Acceptance
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 7.2.3 Disable Secure ICMP Redirect Acceptance
+net.ipv4.conf.all.secure_redirects=0
+net.ipv4.conf.default.secure_redirects=0
+EOF
+etckeeper commit "CIS: 7.2.3 Disable Secure ICMP Redirect Acceptance"
+
+# CIS: 7.2.4 Log Suspicious Packets
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 7.2.4 Log Suspicious Packets
+net.ipv4.conf.all.log_martians=1
+net.ipv4.conf.default.log_martians=1
+EOF
+etckeeper commit "CIS: 7.2.4 Log Suspicious Packets"
+
+# CIS: 7.2.5 Enable Ignore Broadcast Requests
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 7.2.5 Enable Ignore Broadcast Requests
+net.ipv4.icmp_echo_ignore_broadcasts=1
+EOF
+etckeeper commit "CIS: 7.2.5 Enable Ignore Broadcast Requests"
+
+# CIS: 7.2.6 Enable Bad Error Message Protection
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 7.2.6 Enable Bad Error Message Protection
+net.ipv4.icmp_ignore_bogus_error_responses=1
+EOF
+etckeeper commit "CIS: 7.2.6 Enable Bad Error Message Protection"
+
+# CIS: 7.2.7 Enable RFC-recommended Source Route Validation
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 7.2.7 Enable RFC-recommended Source Route Validation
+net.ipv4.conf.all.rp_filter=1
+net.ipv4.conf.default.rp_filter=1
+EOF
+etckeeper commit "CIS: 7.2.7 Enable RFC-recommended Source Route Validation"
+
+# CIS: 7.2.8 Enable TCP SYN Cookies
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 7.2.8 Enable TCP SYN Cookies
+net.ipv4.tcp_syncookies=1
+EOF
+etckeeper commit "CIS: 7.2.8 Enable TCP SYN Cookies"
+
+# CIS: 7.3.1 Disable IPv6 Router Advertisements
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 7.3.1 Disable IPv6 Router Advertisements
+net.ipv6.conf.all.accept_ra=0
+net.ipv6.conf.default.accept_ra=0
+EOF
+etckeeper commit "CIS: 7.3.1 Disable IPv6 Router Advertisements"
+
+# CIS: 7.3.2 Disable IPv6 Redirect Acceptance
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 7.3.2 Disable IPv6 Redirect Acceptance
+net.ipv6.conf.all.accept_redirects=0
+net.ipv6.conf.default.accept_redirects=0
+EOF
+etckeeper commit "CIS: 7.3.2 Disable IPv6 Redirect Acceptance"
+
+# CIS: 7.3.3 Disable IPv6
+cat << EOF >> /etc/modprobe.d/ipv6.conf
+# CIS: 7.3.3 Disable IPv6
+options ipv6 disable=1
+EOF
+chkconfig ip6tables off
+etckeeper commit "CIS: 7.3.3 Disable IPv6"
+
+# CIS: 7.4.2 Create /etc/hosts.allow
+# CIS: 7.4.3 Verify Permissions on /etc/hosts.allow
+chmod 644 /etc/hosts.allow
+etckeeper commit "CIS: 7.4.3 Verify Permissions on /etc/hosts.allow"
+
+# CIS: 7.4.4 Create /etc/hosts.deny
+echo "ALL: ALL" >> /etc/hosts.deny
+etckeeper commit "CIS: 7.4.4 Create /etc/hosts.deny"
+
+# CIS: 7.4.5 Verify Permissions on /etc/hosts.deny
+chmod 644 /etc/hosts.deny
+etckeeper commit "CIS: 7.4.5 Verify Permissions on /etc/hosts.deny"
+
+# CIS: 7.5.1 Disable DCCP
+cat << EOF >> /etc/modprobe.d/CIS.conf
+
+# CIS: 7.5.1 Disable DCCP
+install dccp /bin/true
+EOF
+etckeeper commit "CIS: 7.5.1 Disable DCCP"
+
+# CIS: 7.5.2 Disable SCTP
+cat << EOF >> /etc/modprobe.d/CIS.conf
+
+# CIS: 7.5.2 Disable SCTP
+install sctp /bin/true
+EOF
+etckeeper commit "CIS: 7.5.2 Disable SCTP"
+
+# CIS: 7.5.3 Disable RDS
+cat << EOF >> /etc/modprobe.d/CIS.conf
+
+# CIS: 7.5.3 Disable RDS
+install rds /bin/true
+EOF
+etckeeper commit "CIS: 7.5.3 Disable RDS"
+
+# CIS: 7.5.4 Disable TIPC
+cat << EOF >> /etc/modprobe.d/CIS.conf
+
+# CIS: 7.5.4 Disable TIPC
+install tipc /bin/true
+EOF
+etckeeper commit "CIS: 7.5.4 Disable TIPC"
+
+# CIS: 7.6 Deactivate Wireless Interfaces (UNKOWN: don't know if this system has wireless)
+
+# CIS: 7.7 SuSEfirewall2 is active
+chkconfig SuSEfirewall2_init on
+chkconfig SuSEfirewall2_setup on
+sed -i 's/^FW_KERNEL_SECURITY=.*/FW_KERNEL_SECURITY="no"/' /etc/sysconfig/SuSEfirewall2
+etckeeper commit "CIS: 7.7 SuSEfirewall2 is active"
+
+# CIS: 7.8 Limit access to trusted networks (OK: default is compliant)
+
+# CIS: 8.1.1.1 Configure Audit Log Storage Size (OK: default is compliant)
+
+# CIS: 8.1.1.2 Disable System on Audit Log Full
+sed -i 's/^space_left_action .*/space_left_action = email/' /etc/audit/auditd.conf
+sed -i 's/^action_mail_acct .*/action_mail_acct = root/' /etc/audit/auditd.conf
+sed -i 's/^admin_space_left_action .*/admin_space_left_action = halt/' /etc/audit/auditd.conf
+etckeeper commit "CIS: 8.1.1.2 Disable System on Audit Log Full"
+
+# CIS: 8.1.1.3 Keep All Auditing Information
+sed -i 's/^max_log_file_action .*/max_log_file_action = keep_logs/' /etc/audit/auditd.conf
+etckeeper commit "CIS: 8.1.1.3 Keep All Auditing Information"
+
+# CIS: 8.1.2 Enable auditd Service
+chkconfig auditd on
+etckeeper commit "CIS: 8.1.2 Enable auditd Service"
+
+# CIS: 8.1.3 Enable Auditing for Processes That Start Prior to auditd
+sed -i 's/^\(.*kernel.*\)/\1 audit=1/' /boot/grub/menu.lst
+etckeeper commit "CIS: 8.1.3 Enable Auditing for Processes That Start Prior to auditd"
+
+# CIS: 8.1.4 Record Events That Modify Date and Time Information
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.4 Record Events That Modify Date and Time Information
+-a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change
+-a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change
+-a always,exit -F arch=b64 -S clock_settime -k time-change
+-a always,exit -F arch=b32 -S clock_settime -k time-change
+-w /etc/localtime -p wa -k time-change
+EOF
+etckeeper commit "CIS: 8.1.4 Record Events That Modify Date and Time Information"
+
+# CIS: 8.1.5 Record Events That Modify User/Group Information
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.5 Record Events That Modify User/Group Information
+-w /etc/group -p wa -k identity
+-w /etc/passwd -p wa -k identity
+-w /etc/gshadow -p wa -k identity
+-w /etc/shadow -p wa -k identity
+-w /etc/security/opasswd -p wa -k identity
+EOF
+etckeeper commit "CIS: 8.1.5 Record Events That Modify User/Group Information"
+
+# CIS: 8.1.6 Record Events That Modify the System's Network Environment
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.6 Record Events That Modify the System's Network Environment
+-a exit,always -F arch=b64 -S sethostname -S setdomainname -k system-locale
+-a exit,always -F arch=b32 -S sethostname -S setdomainname -k system-locale
+-w /etc/issue -p wa -k system-locale
+-w /etc/issue.net -p wa -k system-locale
+-w /etc/hosts -p wa -k system-locale
+-w /etc/sysconfig/network -p wa -k system-locale
+EOF
+etckeeper commit "CIS: 8.1.6 Record Events That Modify the System's Network Environment"
+
+# CIS: 8.1.7 Record Events That Modify the System's Mandatory Access Controls
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.7 Record Events That Modify the System's Mandatory Access Controls
+-w /etc/selinux/ -p wa -k MAC-policy
+EOF
+etckeeper commit "CIS: 8.1.7 Record Events That Modify the System's Mandatory Access Controls"
+
+# CIS: 8.1.8 Collect Login and Logout Events
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.8 Collect Login and Logout Events
+-w /var/log/faillog -p wa -k logins
+-w /var/log/lastlog -p wa -k logins
+-w /var/log/tallylog -p wa -k logins
+EOF
+etckeeper commit "CIS: 8.1.8 Collect Login and Logout Events"
+
+# CIS: 8.1.9 Collect Session Initiation Information
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.9 Collect Session Initiation Information
+-w /var/run/utmp -p wa -k session
+-w /var/log/wtmp -p wa -k session
+-w /var/log/btmp -p wa -k session
+EOF
+etckeeper commit "CIS: 8.1.9 Collect Session Initiation Information"
+
+# CIS: 8.1.10 Collect Discretionary Access Control Permission Modification Events
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.10 Collect Discretionary Access Control Permission Modification Events
+-a always,exit -F arch=b64 -S chmod -S fchmod -S fchmodat -F auid>=500 -F auid!=4294967295 -k perm_mod
+-a always,exit -F arch=b32 -S chmod -S fchmod -S fchmodat -F auid>=500 -F auid!=4294967295 -k perm_mod
+-a always,exit -F arch=b64 -S chown -S fchown -S fchownat -S lchown -F auid>=500 -F auid!=4294967295 -k perm_mod
+-a always,exit -F arch=b32 -S chown -S fchown -S fchownat -S lchown -F auid>=500 -F auid!=4294967295 -k perm_mod
+-a always,exit -F arch=b64 -S setxattr -S lsetxattr -S fsetxattr -S removexattr -S lremovexattr -S fremovexattr -F auid>=500 -F auid!=4294967295 -k perm_mod
+-a always,exit -F arch=b32 -S setxattr -S lsetxattr -S fsetxattr -S removexattr -S lremovexattr -S fremovexattr -F auid>=500 -F auid!=4294967295 -k perm_mod
+EOF
+etckeeper commit "CIS: 8.1.10 Collect Discretionary Access Control Permission Modification Events"
+
+# CIS: 8.1.11 Collect Unsuccessful Unauthorized Access Attempts to Files
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.11 Collect Unsuccessful Unauthorized Access Attempts to Files
+-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=500 -F auid!=4294967295 -k access
+-a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=500 -F auid!=4294967295 -k access
+-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=500 -F auid!=4294967295 -k access
+-a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=500 -F auid!=4294967295 -k access
+EOF
+etckeeper commit "CIS: 8.1.11 Collect Unsuccessful Unauthorized Access Attempts to Files"
+
+# CIS: 8.1.12 Collect Use of Privileged Commands
+# for some reason the find command does not detect 4 of the files so we will
+# add them manually at the end
+( echo ""
+  echo "# CIS: 8.1.12 Collect Use of Privileged Commands"
+  find / -xdev \( -perm -4000 -o -perm -2000 \) -type f | \
+    awk '{print "-a always,exit -F path=" $1 " -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" }'
+  find /usr -xdev \( -perm -4000 -o -perm -2000 \) -type f | \
+    awk '{print "-a always,exit -F path=" $1 " -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" }'
+    echo "-a always,exit -F path=/usr/bin/write -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged"
+    echo "-a always,exit -F path=/usr/bin/vlock -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged"
+    echo "-a always,exit -F path=/usr/bin/wall -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged"
+    echo "-a always,exit -F path=/usr/sbin/zypp-refresh-wrapper -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged"
+) >> /etc/audit/audit.rules
+etckeeper commit "CIS: 8.1.12 Collect Use of Privileged Commands"
+
+# CIS: 8.1.13 Collect Successful File System Mounts
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.13 Collect Successful File System Mounts
+-a always,exit -F arch=b64 -S mount -F auid>=500 -F auid!=4294967295 -k mounts
+-a always,exit -F arch=b32 -S mount -F auid>=500 -F auid!=4294967295 -k mounts
+EOF
+etckeeper commit "CIS: 8.1.13 Collect Successful File System Mounts"
+
+# CIS: 8.1.14 Collect File Deletion Events by User
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.14 Collect File Deletion Events by User
+-a always,exit -F arch=b64 -S unlink -S unlinkat -S rename -S renameat -F auid>=500 -F auid!=4294967295 -k delete
+-a always,exit -F arch=b32 -S unlink -S unlinkat -S rename -S renameat -F auid>=500 -F auid!=4294967295 -k delete
+EOF
+etckeeper commit "CIS: 8.1.14 Collect File Deletion Events by User"
+
+# CIS: 8.1.15 Collect Changes to System Administration Scope (sudoers)
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.15 Collect Changes to System Administration Scope (sudoers)
+-w /etc/sudoers -p wa -k scope
+EOF
+etckeeper commit "CIS: 8.1.15 Collect Changes to System Administration Scope (sudoers)"
+
+# CIS: 8.1.16 Collect System Administrator Actions (sudolog)
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.16 Collect System Administrator Actions (sudolog)
+-w /var/log/sudo.log -p wa -k actions
+EOF
+etckeeper commit "CIS: 8.1.16 Collect System Administrator Actions (sudolog)"
+
+# CIS: 8.1.17 Collect Kernel Module Loading and Unloading
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.17 Collect Kernel Module Loading and Unloading
+-w /sbin/insmod -p x -k modules
+-w /sbin/rmmod -p x -k modules
+-w /sbin/modprobe -p x -k modules
+-a always,exit arch=b32 -S init_module -S delete_module -k modules
+-a always,exit arch=b64 -S init_module -S delete_module -k modules
+EOF
+etckeeper commit "CIS: 8.1.17 Collect Kernel Module Loading and Unloading"
+
+# CIS: 8.1.18 Make the Audit Configuration Immutable
+cat << EOF >> /etc/audit/audit.rules
+
+# CIS: 8.1.18 Make the Audit Configuration Immutable
+-e 2
+EOF
+etckeeper commit "CIS: 8.1.18 Make the Audit Configuration Immutable"
+
+# CIS: 8.2.2 Ensure the rsyslog Service is activated
+sed -i 's/^SYSLOG_DAEMON=.*/SYSLOG_DAEMON="rsyslog"/' /etc/sysconfig/syslog
+etckeeper commit "CIS: 8.2.2 Ensure the rsyslog Service is activated"
+
+# CIS: 8.2.3 Configure /etc/rsyslog.conf (OK: default is compliant)
+
+# CIS: 8.2.4 Create and Set Permissions on rsyslog Log Files
+grep "\/var\/log\/" /etc/rsyslog.conf | awk '{print $2}' | sed -e 's/^-//' | \
+sort -u | while read LOG_FILE
+do
+    chown root:root "${LOG_FILE}"
+    chmod 600 "${LOG_FILE}"
+done
+sed -i 's/tty10/console/' /etc/rsyslog.conf
+
+# CIS: 8.2.5 Configure rsyslog to Send Logs to a Remote Log Host (NOT COMPLIANT: leaving for administrator action)
+
+# CIS: 8.2.6 Accept Remote rsyslog Messages Only on Designated Log Hosts (OK: default is compliant)
+
+# CIS: 8.3.2 Implement Periodic Execution of File Integrity
+cat << EOF >> /etc/cron.d/aide
+# CIS: 8.3.2 Implement Periodic Execution of File Integrity
+0 5 * * * root /usr/sbin/aide --check
+EOF
+etckeeper commit "CIS: 8.3.2 Implement Periodic Execution of File Integrity"
+
+# CIS: 8.4 Configure logrotate (OK: default is compliant)
+
+# CIS: 9.1.1 Enable cron Daemon
+chkconfig cron on
+etckeeper commit "CIS: 9.1.1 Enable cron Daemon"
+
+# CIS: 9.1.2 Set User/Group Owner and Permission on /etc/crontab
+chown root:root /etc/crontab
+chmod 600 /etc/crontab
+etckeeper commit "CIS: 9.1.2 Set User/Group Owner and Permission on /etc/crontab"
+
+# CIS: 9.1.3 Set User/Group Owner and Permission on /etc/cron.hourly
+chown root:root /etc/cron.hourly
+chmod 700 /etc/cron.hourly
+etckeeper commit "CIS: 9.1.3 Set User/Group Owner and Permission on /etc/cron.hourly"
+
+# CIS: 9.1.4 Set User/Group Owner and Permission on /etc/cron.daily
+chown root:root /etc/cron.daily
+chmod 700 /etc/cron.daily
+etckeeper commit "CIS: 9.1.4 Set User/Group Owner and Permission on /etc/cron.daily"
+
+# CIS: 9.1.5 Set User/Group Owner and Permission on /etc/cron.weekly
+chown root:root /etc/cron.weekly
+chmod 700 /etc/cron.weekly
+etckeeper commit "CIS: 9.1.5 Set User/Group Owner and Permission on /etc/cron.weekly"
+
+# CIS: 9.1.6 Set User/Group Owner and Permission on /etc/cron.monthly
+chown root:root /etc/cron.monthly
+chmod 700 /etc/cron.monthly
+etckeeper commit "CIS: 9.1.6 Set User/Group Owner and Permission on /etc/cron.monthly"
+
+# CIS: 9.1.7 Set User/Group Owner and Permission on /etc/cron.d
+chown root:root /etc/cron.d
+chmod 700 /etc/cron.d
+etckeeper commit "CIS: 9.1.7 Set User/Group Owner and Permission on /etc/cron.d"
+
+# CIS: 9.1.8 Restrict at/cron to Authorized Users
+rm /etc/at.deny
+echo "root" > /etc/at.allow
+chown root:root /etc/at.allow
+chmod 0600 /etc/at.allow
+rm /etc/cron.deny
+echo "root" > /etc/cron.allow
+chown root:root /etc/cron.allow
+chmod 0600 /etc/cron.allow
+etckeeper commit "CIS: 9.1.8 Restrict at/cron to Authorized Users"
+
+# CIS: 9.2.1 Set SSH Protocol to 2
+sed -i 's/.*Protocol .*/Protocol 2/' /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.1 Set SSH Protocol to 2"
+
+# CIS: 9.2.2 Set LogLevel to INFO
+sed -i 's/.*LogLevel .*/LogLevel INFO/' /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.2 Set LogLevel to INFO"
+
+# CIS: 9.2.3 Set Permissions on /etc/ssh/sshd_config
+chown root:root /etc/ssh/sshd_config
+chmod 600 /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.3 Set Permissions on /etc/ssh/sshd_config"
+
+# CIS: 9.2.4 Disable SSH X11 Forwarding
+sed -i 's/.*X11Forwarding .*/X11Forwarding no/' /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.4 Disable SSH X11 Forwarding"
+
+# CIS: 9.2.5 Set SSH MaxAuthTries to 4 or Less
+sed -i 's/.*MaxAuthTries .*/MaxAuthTries 4/' /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.5 Set SSH MaxAuthTries to 4 or Less"
+
+# CIS: 9.2.6 Set SSH IgnoreRhosts to Yes
+sed -i 's/.*IgnoreRhosts .*/IgnoreRhosts yes/' /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.6 Set SSH IgnoreRhosts to Yes"
+
+# CIS: 9.2.7 Set SSH HostbasedAuthentication to No 
+sed -i 's/.*HostbasedAuthentication .*/HostbasedAuthentication no/' /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.7 Set SSH HostbasedAuthentication to No"
+
+# CIS: 9.2.8 Disable SSH Root Login
+sed -i 's/.*PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.8 Disable SSH Root Login"
+
+# CIS: 9.2.9 Set SSH PermitEmptyPasswords to No
+sed -i 's/.*PermitEmptyPasswords .*/PermitEmptyPasswords no/' /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.9 Set SSH PermitEmptyPasswords to No"
+
+# CIS: 9.2.10 Do Not Allow Users to Set Environment Options
+sed -i 's/.*PermitUserEnvironment .*/PermitUserEnvironment no/' /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.10 Do Not Allow Users to Set Environment Options"
+
+# CIS: 9.2.11 Use Only Approved Cipher in Counter Mode
+sed -i 's/^\(Protocol .*\)/\1\nCiphers aes128-ctr,aes192-ctr,aes256-ctr/' /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.11 Use Only Approved Cipher in Counter Mode"
+
+# CIS: 9.2.12 Set Idle Timeout Interval for User Login
+sed -i 's/.*ClientAliveInterval .*/ClientAliveInterval 300/' /etc/ssh/sshd_config
+sed -i 's/.*ClientAliveCountMax .*/ClientAliveCountMax 0/' /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.12 Set Idle Timeout Interval for User Login"
+
+# CIS: 9.2.13 Limit Access via SSH (NOT COMPLIANT: leaving as administrator action)
+
+# CIS: 9.2.14 Set SSH Banner
+sed -i 's/.*Banner .*/Banner \/etc\/issue.net/' /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.14 Set SSH Banner"
+
+# CIS: 9.3.1 Set Password Creation Requirement Parameters Using pam_cracklib
+pam-config -a --cracklib --cracklib-retry=3 --cracklib-minlen=14 --cracklib-dcredit=-1 --cracklib-ucredit=-1 --cracklib-ocredit=-1 --cracklib-lcredit=-1
+etckeeper commit "CIS: 9.3.1 Set Password Creation Requirement Parameters Using pam_cracklib"
+
+# CIS: 9.3.2 Set Lockout for Failed Password Attempts
+sed -i 's/^\(auth.*env.so\)/\1\nauth        required      pam_tally2.so onerr=fail audit silent deny=5 unlock_time=900/' /etc/pam.d/common-auth
+etckeeper commit "CIS: 9.3.2 Set Lockout for Failed Password Attempts"
+
+# CIS: 9.3.3 Limit Password Reuse
+pam-config -a --pwhistory --pwhistory-remember=5
+etckeeper commit "CIS: 9.3.3 Limit Password Reuse"
+
+# CIS: 9.4 Restrict root Login to System Console (OK: default is compliant)
+
+# CIS: 9.5 Restrict Access to the su Command
+sed -i 's/^\(auth.*rootok.*\)/\1\nauth     required   pam_wheel.so use_uid/' /etc/pam.d/su
+etckeeper commit "CIS: 9.5 Restrict Access to the su Command"
+
+# CIS: 10.1.1 Set Password Expiration Days
+sed -i 's/^PASS_MAX_DAYS.*/PASS_MAX_DAYS 90/' /etc/login.defs
+for user in $(cut -f1 -d: /etc/passwd)
+do
+    chage --maxdays 90 $user
+done
+etckeeper commit "CIS: 10.1.1 Set Password Expiration Days"
+
+# CIS: 10.1.2 Set Password Change Minimum Number of Days
+sed -i 's/^PASS_MIN_DAYS.*/PASS_MIN_DAYS 7/' /etc/login.defs
+for user in $(cut -f1 -d: /etc/passwd)
+do
+    chage --mindays 7 $user
+done
+etckeeper commit "CIS: 10.1.2 Set Password Change Minimum Number of Days"
+
+# CIS: 10.1.3 Set Password Expiring Warning Days
+sed -i 's/^PASS_WARN_AGE.*/PASS_WARN_AGE 7/' /etc/login.defs
+for user in $(cut -f1 -d: /etc/passwd)
+do
+    chage --warndays 7 $user
+done
+etckeeper commit "CIS: 10.1.3 Set Password Expiring Warning Days"
+
+# CIS: 10.2 Disable System Accounts
+for user in $(awk -F: '($3 < 500) {print $1 }' /etc/passwd)
+do
+    if [ $user != "root" ]
+    then
+        usermod -L $user
+        if [ $user != "sync" ] && [ $user != "shutdown" ] && [ $user != "halt" ]
+        then
+            usermod -s /sbin/nologin $user
+        fi
+    fi
+done
+etckeeper commit "CIS: 10.2 Disable System Accounts"
+
+# CIS: 10.3 Set Default Group for root Account
+usermod -g 0 root
+etckeeper commit "CIS: 10.3 Set Default Group for root Account"
+
+# CIS: 10.4 Set Default umask for Users
+pam-config -a --umask --umask-umask=0077
+etckeeper commit "CIS: 10.4 Set Default umask for Users"
+
+# CIS: 10.5 Lock Inactive User Accounts
+useradd -D -f 35
+etckeeper commit "CIS: 10.5 Lock Inactive User Accounts"
+
+# CIS: 11.1 Set Warning Banner for Standard Login Services
+# CIS: 11.2 Remove OS Information from Login Warning Banners
+cat << EOF > /etc/issue
+Authorized uses only.
+All activity may be monitored and reported.
+
+EOF
+cat << EOF > /etc/issue.net
+Authorized uses only.
+All activity may be monitored and reported.
+
+EOF
+chown root:root /etc/motd
+chown root:root /etc/issue
+chown root:root /etc/issue.net
+chmod 0644 /etc/motd
+chmod 0644 /etc/issue
+chmod 0644 /etc/issue.net
+etckeeper commit "CIS: 11.1 Set Warning Banner for Standard Login Services (includes CIS 11.2)"
+
+# CIS: 11.3 Set Graphical Warning Banner (N/A: x11 not installed)
+
+# CIS: 12.1 Verify System File Permissions
+
+# CIS: 12.2 Verify Permissions on /etc/passwd
+chmod 644 /etc/passwd
+etckeeper commit "CIS: 12.2 Verify Permissions on /etc/passwd"
+
+# CIS: 12.3 Verify Permissions on /etc/shadow
+chmod 600 /etc/shadow
+etckeeper commit "CIS: 12.3 Verify Permissions on /etc/shadow"
+
+# CIS: 12.4 Verify Permissions on /etc/group
+chmod 644 /etc/group
+etckeeper commit "CIS: 12.4 Verify Permissions on /etc/group"
+
+# CIS: 12.5 Verify User/Group Ownership on /etc/passwd
+chown root:root /etc/passwd
+etckeeper commit "CIS: 12.5 Verify User/Group Ownership on /etc/passwd"
+
+# CIS: 12.6 Verify User/Group Ownership on /etc/shadow
+chown root:shadow /etc/shadow
+etckeeper commit "CIS: 12.6 Verify User/Group Ownership on /etc/shadow"
+
+# CIS: 12.7 Verify User/Group Ownership on /etc/group
+chown root:root /etc/group
+etckeeper commit "CIS: 12.7 Verify User/Group Ownership on /etc/group"
+
+# CIS: 12.8 Find World Writable Files
+
+# CIS: 12.9 Find Un-owned Files and Directories
+
+# CIS: 12.10 Find Un-grouped Files and Directories
+
+# CIS: 12.11 Find SUID System Executables
+
+# CIS: 12.12 Find SGID System Executables
+
+# CIS: 13.1 Ensure Password Fields are Not Empty
+
+# CIS: 13.2 Verify No Legacy "+" Entries Exist in /etc/passwd File
+
+# CIS: 13.3 Verify No Legacy "+" Entries Exist in /etc/shadow File
+
+# CIS: 13.4 Verify No Legacy "+" Entries Exist in /etc/group File
+
+# CIS: 13.5 Verify No UID 0 Accounts Exist Other Than root
+
+# CIS: 13.6 Ensure root PATH Integrity
+
+# CIS: 13.7 Check Permissions on User Home Directories
+chmod 750 /var/lib/nobody
+
+# CIS: 13.8 Check User Dot File Permissions
+
+# CIS: 13.9 Check Permissions on User .netrc Files
+
+# CIS: 13.10 Check for Presence of User .rhosts Files
+
+# CIS: 13.11 Check Groups in /etc/passwd
+
+# CIS: 13.12 Check That Users Are Assigned Valid Home Directories
+
+# CIS: 13.13 Check User Home Directory Ownership
+
+# CIS: 13.14 Check for Duplicate UIDs
+
+# CIS: 13.15 Check for Duplicate GIDs
+
+# CIS: 13.16 Check for Duplicate User Names
+
+# CIS: 13.17 Check for Duplicate Group Names
+
+# CIS: 13.18 Check for Presence of User .netrc Files
+
+# CIS: 13.19 Check for Presence of User .forward Files
+
+# Force root password change
+chage -d 0 root
+etckeeper commit "Force root to change password"
+                    ]]>
+                </source>
+            </script>
+        </post-scripts>
+
+    <!-- 4.16.5: INIT SCRIPTS -->
+        <init-scripts config:type="list">
+            <script>
+                <filename>init.sh</filename>
+                <interpreter>shell</interpreter>
+                <debug config:type="boolean">true</debug>
+                <source>
+                    <![CDATA[#!/bin/bash
+# Something between the running of post-install.sh and
+# init.sh is reverting the permissions of several files.
+# It is for this reason that we revist those settings here.
+
+# CIS: 12.3 Verify Permissions on /etc/shadow
+chmod 600 /etc/shadow
+etckeeper commit "CIS: 12.3 Verify Permissions on /etc/shadow"
+
+# CIS: 9.1.2 Set User/Group Owner and Permission on /etc/crontab
+chown root:root /etc/crontab
+chmod 600 /etc/crontab
+etckeeper commit "CIS: 9.1.2 Set User/Group Owner and Permission on /etc/crontab"
+
+# CIS: 9.2.3 Set Permissions on /etc/ssh/sshd_config
+chown root:root /etc/ssh/sshd_config
+chmod 600 /etc/ssh/sshd_config
+etckeeper commit "CIS: 9.2.3 Set Permissions on /etc/ssh/sshd_config"
+                    ]]>
+                </source>
+            </script>
+        </init-scripts>
+    </scripts>
+
+<!-- ?.?: TIMEZONE -->
+    <timezone>
+        <hwclock>UTC</hwclock>
+        <timezone>America/New_York</timezone>
+    </timezone>
+
+<!-- ?.?: FIREWALL -->
+    <firewall>
+        <enable_firewall config:type="boolean">false</enable_firewall>
+        <start_firewall config:type="boolean">false</start_firewall>
+    </firewall>
+
+<!-- ?.?: PRINTER -->
+    <printer>
+        <cups_remote_server/>
+        <server_settings/>
+    </printer>
+
+<!-- ?.?: KEYBOARD -->
+    <keyboard>
+        <keymap>english-us</keymap>
+    </keyboard>
+
+<!-- ?.?: LANGUAGE -->
+    <language>
+        <language>en_US</language>
+        <languages></languages>
+    </language>
+
+</profile>
