@@ -33,7 +33,7 @@
 #       └── 11
 #           └── sp4
 #               ├── os
-#               │   └── x86_64 <== SLES-11-SP4-DVD-x86_64-GM-DVD1.iso
+#               │   └── x86_64 <== SLES-11-SP4-DVD-x86_64-GM-DVD1.iso
 #               └── sdk
 #                   └── x86_64 <== SLE-11-SP4-SDK-DVD-x86_64-GM-DVD1.iso
 #
@@ -103,6 +103,7 @@
         <ask-list config:type="list"/>
         <mode>
             <confirm config:type="boolean">false</confirm>
+            <final_reboot config:type="boolean">true</final_reboot>
         </mode>
         <mouse>
             <id>none</id>
@@ -178,7 +179,7 @@
                     <crypt_fs config:type="boolean">false</crypt_fs>
                     <filesystem config:type="symbol">ext3</filesystem>
                     <format config:type="boolean">true</format>
-                    <fstopt>acl,user_xattr</fstopt>
+                    <fstopt>acl,user_xattr,nodev</fstopt>
                     <loop_fs config:type="boolean">false</loop_fs>
                     <lv_name>lv02</lv_name>
                     <mount>/home</mount>
@@ -234,7 +235,7 @@
                     <crypt_fs config:type="boolean">false</crypt_fs>
                     <filesystem config:type="symbol">ext3</filesystem>
                     <format config:type="boolean">true</format>
-                    <fstopt>acl,user_xattr</fstopt>
+                    <fstopt>acl,user_xattr,nodev,nosuid,noexec</fstopt>
                     <loop_fs config:type="boolean">false</loop_fs>
                     <lv_name>lv06</lv_name>
                     <mount>/tmp</mount>
@@ -248,7 +249,7 @@
                     <crypt_fs config:type="boolean">false</crypt_fs>
                     <filesystem config:type="symbol">ext3</filesystem>
                     <format config:type="boolean">true</format>
-                    <fstopt>acl,user_xattr</fstopt>
+                    <fstopt>acl,user_xattr,nodev,nosuid,noexec</fstopt>
                     <loop_fs config:type="boolean">false</loop_fs>
                     <lv_name>lv07</lv_name>
                     <mount>/var/tmp</mount>
@@ -300,6 +301,7 @@
         </patterns>
         <packages  config:type="list">
             <package>mercurial</package>
+            <package>rsyslog</package>
         </packages>
 
         <remove-packages config:type="list">
@@ -319,8 +321,8 @@
             <package>pcmciautils</package>
             <package>portmap</package>
             <package>rpcbind</package>
-            <package>rsyslog</package>
             <package>sendmail</package>
+            <package>syslog-ng</package>
             <package>xorg-x11-fonts</package>
             <package>xorg-x11-fonts-core</package>
             <package>yast2-qt</package>
@@ -330,16 +332,17 @@
 
 <!-- 4.5.3: INSTALLING ADDITIONAL AND CUSTOMIZED PACKAGES -->
     <add-on>
-        <add_on_products config:type="list">
-            <listentry>
-                <media_url>http://replace-with-your-url-here</media_url>
-                <product>SUSE Linux Enterprise Server 11 SP4</product>
-                <product_dir>/</product_dir>
-                <ask_on_error config:type="boolean">false</ask_on_error>
-                <name>SUSE Linux Enterprise Server 11 SP4</name> 
-                <import_gpg_key config:type="boolean">true</import_gpg_key>
-            </listentry>
-        </add_on_products>
+      <add_on_products config:type="list">
+        <listentry>
+            <media_url>http://replace-with-your-url-here</media_url>
+            <product>SUSE Linux Enterprise Server 11 SP4 SDK</product>
+            <product_dir>/</product_dir>
+            <ask_on_error config:type="boolean">false</ask_on_error>
+            <name>SUSE Linux Enterprise Server 11 SP4 SDK</name>
+            <import_gpg_key config:type="boolean">true</import_gpg_key>
+            <gpgcheck config:type="boolean">true</gpgcheck>
+        </listentry>
+      </add_on_products>
     </add-on>
 
 <!-- 4.6: RUN LEVELS -->
@@ -482,6 +485,7 @@ LV05_SZ=512
 LV06_SZ=4096
 LV07_SZ=4096
 LV08_SZ=8192
+LV09_SZ=8192
 
 # Get the list of phsyical disks in the system
 DISK_LIST=$(lsblk -io NAME | grep "^[a-z]" | \
@@ -685,6 +689,7 @@ cat /tmp/profile/autoinst.xml       | \
         -e "s/=LV06_SZ=/${LV06_SZ}M/g" \
         -e "s/=LV07_SZ=/${LV07_SZ}M/g" \
         -e "s/=LV08_SZ=/${LV08_SZ}M/g" \
+        -e "s/=LV09_SZ=/${LV09_SZ}M/g" \
         -e "s/=SWAP_SZ=/${SWAP_SZ}M/g" \
         -e '/^  <partitioning config:type="list">/ {
             r /tmp/physical-layout.xml
@@ -694,13 +699,72 @@ cat /tmp/profile/autoinst.xml       | \
             </script>
         </pre-scripts>
 
+    <!-- 4.16.3 CHROOT-ENVIRONMENT SCRIPTS -->
+        <chroot-scripts config:type="list">
+            <script>
+                <filename>copy-resolv-conf.sh</filename>
+                <interpreter>shell</interpreter>
+                <debug config:type="boolean">true</debug>
+                <chrooted config:type="boolean">false</chrooted>
+                <source>
+                    <![CDATA[#!/bin/bash
+# Copy resolv.conf into the image.  We need this so
+# the chrooted 'zypper addrepo' will succeed
+cp /etc/resolv.conf /mnt/etc/resolv.conf
+                    ]]>
+                </source>
+            </script>
+            <script>
+                <filename>chroot.sh</filename>
+                <interpreter>shell</interpreter>
+                <debug config:type="boolean">true</debug>
+                <chrooted config:type="boolean">true</chrooted>
+                <source>
+                    <![CDATA[#!/bin/bash
+
+# Import the repo definition
+zypper addrepo http://download.opensuse.org/repositories/devel:/tools:/scm/SLE_11_SP4/devel:tools:scm.repo
+
+# Import the GPG key
+rpm --import http://download.opensuse.org/repositories/devel:/tools:/scm/SLE_11_SP4//repodata/repomd.xml.key
+
+# Install etckeeper
+zypper install --no-recommends -y etckeeper
+zypper install --no-recommends -y etckeeper-cron
+zypper install --no-recommends -y etckeeper-zypp-plugin
+
+# Disable the repo
+zypper modifyrepo -d devel_tools_scm
+                    ]]>
+                </source>
+            </script>
+        </chroot-scripts>
+
     <!-- 4.16.4: POST-INSTALL SCRIPTS -->
         <post-scripts config:type="list">
             <script>
+                <filename>post-install.sh</filename>
+                <interpreter>shell</interpreter>
+                <debug config:type="boolean">true</debug>
                 <source>
-                    <![CDATA[
+                    <![CDATA[#!/bin/bash
+
+# Fixup etckeeper
+if [ -f /etc/etckeeper/etckeeper.conf ]
+then
+    cp /etc/etckeeper/etckeeper.conf /etc/etckeeper/etckeeper.conf.orig
+    ( cat /etc/etckeeper/etckeeper.conf | \
+      sed -e 's/^#VCS=\"hg\"/VCS=\"hg\"/'  \
+          -e 's/^VCS=git/#VCS=\"git\"/'
+    ) > /etc/etckeeper/etckeeper.conf.new
+    mv /etc/etckeeper/etckeeper.conf.new /etc/etckeeper/etckeeper.conf
+    etckeeper init
+    etckeeper commit "Initial commit of base system"
+fi
+
 # Force root password change
 chage -d 0 root
+etckeeper commit "Force root to change password"
                     ]]>
                 </source>
             </script>
