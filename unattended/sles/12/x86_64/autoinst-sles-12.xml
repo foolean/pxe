@@ -750,22 +750,9 @@ cp /etc/resolv.conf /mnt/etc/resolv.conf
 # NOTE: It appears that SLES 12 does not permit zypper to be run from within
 #       the chroot script.  This used to work under SLES 11.  It is for this
 #       reason that we scrape the upstream repo for the etckeeper packages
-#       and then install them manuall via rpm -ivh.
+#       and then install them manuall via rpm -ivh.  We will add the repo
+#       during the init script phase in order to keep package management sane.
 BASE_URL="http://download.opensuse.org/repositories/devel:/tools:/scm/SLE_12/x86_64/"
-
-# Import the repo definition
-zypper addrepo "${BASE_URL}/../devel:tools:scm.repo"
-
-# Import the GPG key
-rpm --import "${BASE_URL}/../repodata/repomd.xml.key"
-
-# Install etckeeper
-zypper install --no-recommends -y etckeeper
-zypper install --no-recommends -y etckeeper-cron
-zypper install --no-recommends -y etckeeper-zypp-plugin
-
-# Disable the repo
-zypper modifyrepo -d devel_tools_scm
 
 # Install etckeeper, the hard way
 wget -O- "${BASE_URL}" 2>&1                             | \
@@ -809,6 +796,41 @@ etckeeper commit "Force root to change password"
                 </source>
             </script>
         </post-scripts>
+
+        <!-- 4.30.5 Init Scripts -->
+        <init-scripts config:type="list">
+            <script>
+                <debug config:type="boolean">true</debug>
+                <filename>init.sh</filename>
+                <interpreter>shell</interpreter>
+                <source>
+                    <![CDATA[#!/bin/bash
+
+# NOTE: Since SLES-12 does not permit zypper to run during the chroot
+#       script phase, we must manually install the RPM packages then.
+#       However, we still want to be able to manage the etckeeper
+#       packages using normal package management tools so we'll add
+#       the upstream repo here.
+BASE_URL="http://download.opensuse.org/repositories/devel:/tools:/scm/SLE_12/x86_64/"
+
+# Import the repo definition
+zypper addrepo "${BASE_URL}/../devel:tools:scm.repo"
+
+# Import the GPG key
+rpm --import "${BASE_URL}/../repodata/repomd.xml.key"
+
+# Install etckeeper
+zypper install --no-recommends -y etckeeper
+zypper install --no-recommends -y etckeeper-cron
+zypper install --no-recommends -y etckeeper-zypp-plugin
+
+# Disable the repo
+zypper modifyrepo -d devel_tools_scm
+                    ]]>
+                </source>
+            </script>
+
+        </init-scripts>
     </scripts>
 
     <!-- ?.?: TIMEZONE -->
