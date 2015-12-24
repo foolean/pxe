@@ -146,16 +146,6 @@
 
     <!-- 4.4 The Boot Loader -->
     <bootloader>
-        <device_map config:type="list">
-            <device_map_entry>
-                <firmware>fd0</firmware>
-                <linux>/dev/fd0</linux>
-            </device_map_entry>
-            <device_map_entry>
-                <firmware>hd0</firmware>
-                <linux>/dev/sda</linux>
-            </device_map_entry>
-        </device_map>
         <global>
             <activate>true</activate>
             <append>   resume=/dev/vg0/swap splash=silent quiet showopts</append>
@@ -204,7 +194,7 @@
                     <crypt_fs config:type="boolean">false</crypt_fs>
                     <filesystem config:type="symbol">ext4</filesystem>
                     <format config:type="boolean">true</format>
-                    <fstopt>acl,user_xattr</fstopt>
+                    <fstopt>acl,user_xattr,nodev</fstopt>
                     <loop_fs config:type="boolean">false</loop_fs>
                     <lv_name>lv02</lv_name>
                     <mount>/home</mount>
@@ -260,7 +250,7 @@
                     <crypt_fs config:type="boolean">false</crypt_fs>
                     <filesystem config:type="symbol">ext4</filesystem>
                     <format config:type="boolean">true</format>
-                    <fstopt>acl,user_xattr</fstopt>
+                    <fstopt>acl,user_xattr,nodev,nosuid,noexec</fstopt>
                     <loop_fs config:type="boolean">false</loop_fs>
                     <lv_name>lv06</lv_name>
                     <mount>/tmp</mount>
@@ -274,7 +264,7 @@
                     <crypt_fs config:type="boolean">false</crypt_fs>
                     <filesystem config:type="symbol">ext4</filesystem>
                     <format config:type="boolean">true</format>
-                    <fstopt>acl,user_xattr</fstopt>
+                    <fstopt>acl,user_xattr,nodev,nosuid</fstopt>
                     <loop_fs config:type="boolean">false</loop_fs>
                     <lv_name>lv07</lv_name>
                     <mount>/var/tmp</mount>
@@ -335,6 +325,7 @@
             <package>sles-release</package>
             <package>kexec-tools</package>
             <package>perl-Bootloader-YAML</package>
+            <package>zypp-plugin-python</package>
         </packages>
         <patterns config:type="list">
             <pattern>Minimal</pattern>
@@ -362,6 +353,7 @@
         <default_target>multi-user</default_target>
         <services>
             <disable config:type="list">
+                <service>postfix</service>
                 <service>sshd</service>
             </disable>
             <enable config:type="list"/>
@@ -370,40 +362,9 @@
 
     <!-- 4.12 Network Configuration -->
     <networking>
-        <dns>
-            <dhcp_hostname config:type="boolean">false</dhcp_hostname>
-            <resolv_conf_policy/>
-            <write_hostname config:type="boolean">false</write_hostname>
-        </dns>
-        <interfaces config:type="list">
-            <interface>
-                <bootproto>dhcp</bootproto>
-                <device>eth0</device>
-                <startmode>auto</startmode>
-            </interface>
-            <interface>
-                <bootproto>static</bootproto>
-                <broadcast>127.255.255.255</broadcast>
-                <device>lo</device>
-                <firewall>no</firewall>
-                <ipaddr>127.0.0.1</ipaddr>
-                <netmask>255.0.0.0</netmask>
-                <network>127.0.0.0</network>
-                <prefixlen>8</prefixlen>
-                <startmode>nfsroot</startmode>
-                <usercontrol>no</usercontrol>
-            </interface>
-        </interfaces>
-        <ipv6 config:type="boolean">true</ipv6>
-        <keep_install_network config:type="boolean">false</keep_install_network>
+        <ipv6 config:type="boolean">false</ipv6>
+        <keep_install_network config:type="boolean">true</keep_install_network>
         <managed config:type="boolean">false</managed>
-        <net-udev config:type="list">
-            <rule>
-                <name>eth0</name>
-                <rule>ATTR{address}</rule>
-                <value>00:0c:29:bc:7b:e4</value>
-            </rule>
-        </net-udev>
         <routing>
             <ipv4_forward config:type="boolean">false</ipv4_forward>
             <ipv6_forward config:type="boolean">false</ipv6_forward>
