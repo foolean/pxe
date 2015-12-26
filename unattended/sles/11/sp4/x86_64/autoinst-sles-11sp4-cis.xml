@@ -33,7 +33,7 @@
 #       └── 11
 #           └── sp4
 #               ├── os
-#               │   └── x86_64 <== SLES-11-SP4-DVD-x86_64-GM-DVD1.iso
+#               │   └── x86_64 <== SLES-11-SP4-DVD-x86_64-GM-DVD1.iso
 #               └── sdk
 #                   └── x86_64 <== SLE-11-SP4-SDK-DVD-x86_64-GM-DVD1.iso
 #
@@ -393,7 +393,9 @@
 -->
         <packages  config:type="list">
             <package>aide</package>
+            <package>lsb-release</package>
             <package>mercurial</package>
+            <package>puppet</package>
             <package>rsyslog</package>
             <package>tcpd</package>
             <package>zypp-plugin-python</package>
@@ -489,6 +491,7 @@
             <ask_on_error config:type="boolean">false</ask_on_error>
             <name>SUSE Linux Enterprise Server 11 SP4 SDK</name> 
             <import_gpg_key config:type="boolean">true</import_gpg_key>
+            <gpgcheck config:type="boolean">true</gpgcheck>
         </listentry>
       </add_on_products>
     </add-on>
