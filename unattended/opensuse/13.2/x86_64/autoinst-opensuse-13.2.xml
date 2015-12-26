@@ -1,0 +1,744 @@
+<?xml version="1.0"?>
+<!--
+#
+# FILENAME:     autoinst-opensuse-13.2.xml
+# DATE:         2015-12-26
+# AUTHOR:       Bennett Samowich <bennett@foolean.org>
+#
+# DESCRIPTION:
+#   AutoYast (auto-install) file for OpenSUSE 13.2
+#
+#   This autoyast file will install a base OpenSUSE system using a partitioning
+#   layout based on the number and size of the disks.
+#
+#   Reference
+#   =========
+#
+#   https://www.suse.com/documentation/sles-12/singlehtml/book_autoyast/book_autoyast.html
+#
+#   PXE Init Arguments
+#   ==================
+#
+#   raidtype    - The RAID type to build (e.g. none, 0, 1, 5, 6, 10)
+#
+#       If raidtype is set to 'none' (the default) then the
+#       first disk will be formatted as a non-RAID, single disk.
+#
+#       NOTE: The /boot partition will always be RAID-1, unless single disk
+#             is selected.  The number of disks and spares used in the /boot
+#             partition will follow the 'raiddisks' and 'raidspares' options.
+#
+#   raiddisks   - The number of active disks to include in the volume
+#
+#   raidspares  - The number of spare disks to include in the volume
+#
+#   The installer itself will throw the error If the requested number of
+#   disks, spares, and raid type can not be fullfilled.
+#
+#   Partition Sizing (smallest disk < 40G)
+#   =======================================
+#   Swap            384(MB)
+#   /               800(MB)
+#   /boot           256(MB)
+#   /home           32(MB)      [ nodev ]
+#   /var            512(MB)
+#   /usr            1280(MB)
+#   /usr/local      256(MB)
+#   /tmp            256(MB)     [ nodev, nosuid, noexec ]
+#   /var/tmp        256(MB)     [ nodev, nosuid, noexec ]
+#   /var/log        1024(MB)
+#   /var/log/audit  1024(MB)
+#
+#   Partition Sizing (smallest disk >= 40G)
+#   =======================================
+#   Swap            4096(MB)
+#   /               896(MB)
+#   /boot           256(MB)
+#   /home           4096(MB)    [ nodev ]
+#   /var            7168(MB)
+#   /usr            4096(MB)
+#   /usr/local      512(MB)
+#   /tmp            4096(MB)    [ nodev, nosuid, noexec ]
+#   /var/tmp        4096(MB)    [ nodev, nosuid, noexec ]
+#   /var/log        8192(MB)
+#   /var/log/audit  8192(MB)
+#
+#   Initial Passwords
+#   =================
+#
+#   The initial root and boot menu password is 'changeme'.
+#
+#   You will be prompted to change the root password at first login.
+#
+###############################################################################
+-->
+<!DOCTYPE profile>
+<profile xmlns="http://www.suse.com/1.0/yast2ns" xmlns:config="http://www.suse.com/1.0/configns">
+    <!-- 4.1 General Options -->
+    <general>
+        <ask-list config:type="list"/>
+        <mode>
+            <confirm config:type="boolean">false</confirm>
+            <final_reboot config:type="boolean">true</final_reboot>
+        </mode>
+        <proposals config:type="list"/>
+        <signature-handling>
+            <accept_file_without_checksum config:type="boolean">true</accept_file_without_checksum>
+            <accept_non_trusted_gpg_key config:type="boolean">true</accept_non_trusted_gpg_key>
+            <accept_unknown_gpg_key config:type="boolean">true</accept_unknown_gpg_key>
+            <accept_unsigned_file config:type="boolean">true</accept_unsigned_file>
+            <accept_verification_failed config:type="boolean">false</accept_verification_failed>
+            <import_gpg_key config:type="boolean">true</import_gpg_key>
+        </signature-handling>
+        <storage>
+            <partition_alignment config:type="symbol">align_optimal</partition_alignment>
+            <start_multipath config:type="boolean">false</start_multipath>
+        </storage>
+    </general>
+
+    <!-- 4.2 Reporting -->
+    <report>
+        <errors>
+            <log config:type="boolean">true</log>
+            <show config:type="boolean">true</show>
+            <timeout config:type="integer">0</timeout>
+        </errors>
+        <messages>
+            <log config:type="boolean">true</log>
+            <show config:type="boolean">true</show>
+            <timeout config:type="integer">10</timeout>
+        </messages>
+        <warnings>
+            <log config:type="boolean">true</log>
+            <show config:type="boolean">true</show>
+            <timeout config:type="integer">10</timeout>
+        </warnings>
+        <yesno_messages>
+            <log config:type="boolean">true</log>
+            <show config:type="boolean">true</show>
+            <timeout config:type="integer">10</timeout>
+        </yesno_messages>
+    </report>
+
+    <!-- 4.3 System Registration and Extension Selection -->
+
+    <!-- 4.4 The Boot Loader -->
+    <bootloader>
+        <global>
+            <activate>true</activate>
+            <append>   resume=/dev/vg0/swap splash=silent quiet showopts</append>
+            <append_failsafe>showopts apm=off noresume edd=off powersaved=off nohz=off highres=off processor.max_cstate=1 nomodeset x11failsafe</append_failsafe>
+            <boot_boot>false</boot_boot>
+            <boot_extended>false</boot_extended>
+            <boot_mbr>true</boot_mbr>
+            <boot_root>false</boot_root>
+            <default>0</default>
+            <distributor>openSUSE</distributor>
+            <generic_mbr>false</generic_mbr>
+            <gfxmode>auto</gfxmode>
+            <os_prober>false</os_prober>
+            <terminal>gfxterm</terminal>
+            <timeout config:type="integer">5</timeout>
+            <vgamode/>
+        </global>
+        <loader_type>grub2</loader_type>
+        <sections config:type="list"/>
+    </bootloader>
+
+    <!-- 4.5 Partitioning -->
+    <partitioning config:type="list">
+        <drive>
+            <device>/dev/vg0</device>
+            <disklabel>msdos</disklabel>
+            <enable_snapshots config:type="boolean">true</enable_snapshots>
+            <initialize config:type="boolean">true</initialize>
+            <partitions config:type="list">
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext4</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv01</lv_name>
+                    <mount>/</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_nr config:type="integer">1</partition_nr>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV01_SZ=</size>
+                </partition>
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext4</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr,nodev</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv02</lv_name>
+                    <mount>/home</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_nr config:type="integer">1</partition_nr>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV02_SZ=</size>
+                </partition>
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext4</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv03</lv_name>
+                    <mount>/var</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_nr config:type="integer">1</partition_nr>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV03_SZ=</size>
+                </partition>
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext4</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv04</lv_name>
+                    <mount>/usr</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_nr config:type="integer">1</partition_nr>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV04_SZ=</size>
+                </partition>
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext4</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv05</lv_name>
+                    <mount>/usr/local</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_nr config:type="integer">1</partition_nr>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV05_SZ=</size>
+                </partition>
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext4</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr,nodev,nosuid,noexec</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv06</lv_name>
+                    <mount>/tmp</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_nr config:type="integer">1</partition_nr>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV06_SZ=</size>
+                </partition>
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext4</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr,nodev,nosuid</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv07</lv_name>
+                    <mount>/var/tmp</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_nr config:type="integer">1</partition_nr>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV07_SZ=</size>
+                </partition>
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext4</filesystem>
+                    <format config:type="boolean">true</format>
+                    <fstopt>acl,user_xattr</fstopt>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>lv08</lv_name>
+                    <mount>/var/log</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_nr config:type="integer">1</partition_nr>
+                    <resize config:type="boolean">false</resize>
+                    <size>=LV08_SZ=</size>
+                </partition>
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">swap</filesystem>
+                    <format config:type="boolean">true</format>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lv_name>swap</lv_name>
+                    <mount>swap</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">130</partition_id>
+                    <partition_nr config:type="integer">1</partition_nr>
+                    <resize config:type="boolean">false</resize>
+                    <size>=SWAP_SZ=</size>
+                </partition>
+            </partitions>
+            <pesize>4M</pesize>
+            <type config:type="symbol">CT_LVM</type>
+            <use>all</use>
+        </drive>
+    </partitioning>
+
+    <!-- 4.6 iSCSI Initiator Overview -->
+
+    <!-- 4.8 Software -->
+    <software>
+        <image/>
+        <instsource/>
+        <packages config:type="list">
+            <package>glibc</package>
+            <package>grub2</package>
+            <package>lvm2</package>
+            <package>mercurial</package>
+            <package>etckeeper</package>
+            <package>lsb-release</package>
+            <package>puppet</package>
+            <package>rsyslog</package>
+            <package>syslinux</package>
+            <package>snapper</package>
+            <package>SuSEfirewall2</package>
+            <package>kdump</package>
+            <package>kexec-tools</package>
+            <package>openSUSE-release</package>
+            <package>perl-Bootloader-YAML</package>
+            <package>zypp-plugin-python</package>
+        </packages>
+        <patterns config:type="list">
+            <pattern>sw_management</pattern>
+            <pattern>base</pattern>
+            <pattern>yast2_install_wf</pattern>
+        </patterns>
+    </software>
+
+    <!-- 4.8.2 Installing Additional and Customized Packages -->
+    <add-on>
+        <add_on_products config:type="list">
+        </add_on_products>
+    </add-on>
+
+    <!-- 4.11 Services and Targets -->
+    <services-manager>
+        <default_target>multi-user</default_target>
+        <services>
+            <disable config:type="list">
+                <service>postfix</service>
+                <service>sshd</service>
+            </disable>
+            <enable config:type="list"/>
+        </services>
+    </services-manager>
+
+    <!-- 4.12 Network Configuration -->
+    <networking>
+        <ipv6 config:type="boolean">false</ipv6>
+        <keep_install_network config:type="boolean">true</keep_install_network>
+        <managed config:type="boolean">false</managed>
+        <routing>
+            <ipv4_forward config:type="boolean">false</ipv4_forward>
+            <ipv6_forward config:type="boolean">false</ipv6_forward>
+        </routing>
+    </networking>
+
+    <!-- 4.12.3 Proxy -->
+    <proxy>
+        <enabled config:type="boolean">false</enabled>
+        <ftp_proxy/>
+        <http_proxy/>
+        <https_proxy/>
+        <no_proxy>localhost, 127.0.0.1</no_proxy>
+        <proxy_password/>
+        <proxy_user/>
+    </proxy>
+
+    <!-- 4.13: SECURITY SETTINGS -->
+
+    <!-- 4.13.3: LOGIN SETTINGS -->
+    <login_settings/>
+
+    <!-- 4.29 Users -->
+    <users config:type="list">
+        <user>
+            <encrypted config:type="boolean">true</encrypted>
+            <fullname>root</fullname>
+            <gid>0</gid>
+            <home>/root</home>
+            <password_settings>
+                <expire/>
+                <flag/>
+                <inact/>
+                <max/>
+                <min/>
+                <warn/>
+            </password_settings>
+            <shell>/bin/bash</shell>
+            <uid>0</uid>
+            <user_password>$6$Gm4OGoH8OphT$YBQn8B8J9BJZWr.kdNZM6V7te/qeY4xTIXwbgeXK/w4mK2nwflrLRBGgA.TNuTH.uKuvdJ9BmB4APtCmY86Ty.</user_password>
+            <username>root</username>
+        </user>
+    </users>
+
+    <!-- 4.30 Custom User Scripts -->
+    <scripts>
+        <!-- 4.30.1 Pre-Install Scripts -->
+        <pre-scripts config:type="list">
+            <script>
+                <filename>pre.sh</filename>
+                <interpreter>shell</interpreter>
+                <source>
+                    <![CDATA[#!/bin/bash
+
+# Get any kernel options and convert them to environment variables
+set -- $(cat /proc/cmdline)
+for I in $*; do case "$I" in *=*) eval $I;; esac; done
+
+# Create a file that contains the autoyast URL as well as git,
+# sha1, and sha256 hashes into the resulting image.  The purpose
+# of which is to provide the ability to show when and how the
+# system was built.
+cat << EOF >> /tmp/tag-install.sh
+#!/bin/sh
+
+while [ ! -d /mnt/etc ]
+do
+    sleep 5
+done
+wget -qO /tmp/autoyast.xml "${autoyast}"
+(   echo "date:    $(date)"
+    echo ""
+    echo "autoyast: ${autoyast}"
+    echo "git-sha:  \$((printf "blob \$(ls -l /tmp/autoyast.xml | awk '{print \$5}')\0"; cat /tmp/autoyast.xml) | sha1sum | awk '{print \$1}')"
+    echo "sha1:     \$(sha1sum /tmp/autoyast.xml | awk '{print \$1}')"
+    echo ""
+    echo "Debugging:"
+    echo "  raidtype   = '\${raidtype}'"
+    echo "  raiddisks  = '\${raiddisks}'"
+    echo "  raidspares = '\${raidspares}'"
+) > /mnt/etc/build-info
+chmod 0000 /mnt/etc/build-info
+EOF
+chmod 700 /tmp/tag-install.sh
+/bin/sh /tmp/tag-install.sh > /dev/null 2>&1 < /dev/null &
+
+# Default partition sizes
+BOOT_SZ=256
+SWAP_SZ=4096
+LV01_SZ=896
+LV02_SZ=4096
+LV03_SZ=7168
+LV04_SZ=4096
+LV05_SZ=512
+LV06_SZ=4096
+LV07_SZ=4096
+LV08_SZ=8192
+LV09_SZ=8192
+
+# Get the list of phsyical disks in the system
+DISK_LIST=$(lsblk -io NAME | grep "^[a-z]" | \
+            egrep -v "^(loop|sr|fd)" | sort -u);
+
+# Get the smallest disk size
+SMALLEST_DISK=$(
+    ( for DISK in ${DISK_LIST}
+      do
+          fdisk -l "/dev/${DISK}"   | \
+              grep "^Disk .* bytes" | \
+              cut -f5 -d\ ;
+      done
+    ) | sort -un | head -n1
+)
+
+# Use a smaller layout if the disk is smaller than 40G
+if [ ${SMALLEST_DISK} -lt 40000000000 ]; then
+    SWAP_SZ=384
+    LV01_SZ=800
+    LV02_SZ=32
+    LV03_SZ=512
+    LV04_SZ=1280
+    LV05_SZ=256
+    LV06_SZ=256
+    LV07_SZ=256
+    LV08_SZ=1024
+    LV09_SZ=1024
+fi
+
+DISKS=$(echo "${DISK_LIST}" | wc -l)
+RAID_TYPE="none"
+RAID_DISKS="${DISKS}"
+RAID_SPARES="0"
+
+if [ "${raidtype}" == "none" ]; then
+    raiddisks=1;
+fi
+if [ "${raidtype}" != "" ]; then
+    RAID_TYPE="${raidtype}"
+fi
+if [ "${raiddisks}" != "" ]; then
+    RAID_DISKS="${raiddisks}"
+fi
+if [ "${raidspares}" != "" ]; then
+    RAID_SPARES="${raidspares}"
+fi
+RAID_TOTAL=$(( ${RAID_DISKS} + ${RAID_SPARES} ))
+XML_FILE="/tmp/physical-layout.xml"
+
+if [ "${RAID_TOTAL}" == "1" ]; then
+    cat << RAID_1_EOF > "${XML_FILE}"
+        <!-- single drive configuration (RAID_TOTAL = ${RAID_TOTAL}) -->
+        <drive>
+            <device>/dev/sda</device>
+            <disklabel>msdos</disklabel>
+            <enable_snapshots config:type="boolean">true</enable_snapshots>
+            <initialize config:type="boolean">true</initialize>
+            <partitions config:type="list">
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext4</filesystem>
+                    <format config:type="boolean">true</format>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <mount>/boot</mount>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">142</partition_id>
+                    <partition_nr config:type="integer">1</partition_nr>
+                    <resize config:type="boolean">false</resize>
+                    <size>${BOOT_SZ}MB</size>
+                </partition>
+                <partition>
+                    <create config:type="boolean">true</create>
+                    <crypt_fs config:type="boolean">false</crypt_fs>
+                    <filesystem config:type="symbol">ext4</filesystem>
+                    <format config:type="boolean">false</format>
+                    <loop_fs config:type="boolean">false</loop_fs>
+                    <lvm_group>vg0</lvm_group>
+                    <mountby config:type="symbol">device</mountby>
+                    <partition_id config:type="integer">142</partition_id>
+                    <partition_nr config:type="integer">2</partition_nr>
+                    <resize config:type="boolean">false</resize>
+                    <size>max</size>
+                </partition>
+            </partitions>
+            <pesize/>
+            <type config:type="symbol">CT_DISK</type>
+            <use>all</use>
+        </drive>
+RAID_1_EOF
+else
+    cat << RAID_MD_PART1_EOF >> "${XML_FILE}"
+        <!-- multiple drive configuration (RAID_TOTAL = ${RAID_TOTAL}) -->
+    <drive>
+      <device>/dev/md</device>
+      <disklabel>msdos</disklabel>
+      <enable_snapshots config:type="boolean">true</enable_snapshots>
+      <initialize config:type="boolean">true</initialize>
+      <partitions config:type="list">
+        <partition>
+          <create config:type="boolean">true</create>
+          <crypt_fs config:type="boolean">false</crypt_fs>
+          <filesystem config:type="symbol">ext4</filesystem>
+          <format config:type="boolean">true</format>
+          <fstopt>acl,user_xattr</fstopt>
+          <loop_fs config:type="boolean">false</loop_fs>
+          <mount>/boot</mount>
+          <mountby config:type="symbol">device</mountby>
+          <partition_id config:type="integer">142</partition_id>
+          <partition_nr config:type="integer">0</partition_nr>
+          <raid_options>
+            <device_order config:type="list">
+RAID_MD_PART1_EOF
+    for DISK in $(echo "${DISK_LIST}" | head -n ${RAID_TOTAL}); do
+        echo "              <device>/dev/${DISK}1</device>" >> "${XML_FILE}"
+    done
+    cat << RAID_MD_PART2_EOF >> "${XML_FILE}"
+            </device_order>
+            <persistent_superblock config:type="boolean">false</persistent_superblock>
+            <raid_name>/dev/md/md0</raid_name>
+            <raid_type>raid1</raid_type>
+          </raid_options>
+          <resize config:type="boolean">false</resize>
+        </partition>
+        <partition>
+          <create config:type="boolean">true</create>
+          <crypt_fs config:type="boolean">false</crypt_fs>
+          <filesystem config:type="symbol">ext4</filesystem>
+          <format config:type="boolean">false</format>
+          <loop_fs config:type="boolean">false</loop_fs>
+          <lvm_group>vg0</lvm_group>
+          <mountby config:type="symbol">device</mountby>
+          <partition_id config:type="integer">142</partition_id>
+          <partition_nr config:type="integer">1</partition_nr>
+          <raid_options>
+            <device_order config:type="list">
+RAID_MD_PART2_EOF
+    for DISK in $(echo "${DISK_LIST}" | head -n ${RAID_TOTAL}); do
+        echo "              <device>/dev/${DISK}2</device>" >> "${XML_FILE}"
+    done
+    cat << RAID_MD_PART3_EOF >> "${XML_FILE}"
+            </device_order>
+            <persistent_superblock config:type="boolean">false</persistent_superblock>
+            <raid_name>/dev/md1</raid_name>
+            <raid_type>raid${RAID_TYPE}</raid_type>
+          </raid_options>
+          <resize config:type="boolean">false</resize>
+        </partition>
+      </partitions>
+      <pesize></pesize>
+      <type config:type="symbol">CT_MD</type>
+      <use>all</use>
+    </drive>
+RAID_MD_PART3_EOF
+
+    for DISK in $(echo "${DISK_LIST}" | head -n ${RAID_TOTAL}); do
+        cat << RAID_DISK_EOF >> "${XML_FILE}"
+    <drive>
+      <device>/dev/${DISK}</device>
+      <disklabel>msdos</disklabel>
+      <enable_snapshots config:type="boolean">true</enable_snapshots>
+      <initialize config:type="boolean">true</initialize>
+      <partitions config:type="list">
+        <partition>
+          <create config:type="boolean">true</create>
+          <crypt_fs config:type="boolean">false</crypt_fs>
+          <filesystem config:type="symbol">ext4</filesystem>
+          <format config:type="boolean">true</format>
+          <loop_fs config:type="boolean">false</loop_fs>
+          <mountby config:type="symbol">device</mountby>
+          <partition_id config:type="integer">142</partition_id>
+          <partition_nr config:type="integer">1</partition_nr>
+          <raid_name>/dev/md/md0</raid_name>
+          <resize config:type="boolean">false</resize>
+          <size>${BOOT_SZ}MB</size>
+        </partition>
+        <partition>
+          <create config:type="boolean">true</create>
+          <crypt_fs config:type="boolean">false</crypt_fs>
+          <filesystem config:type="symbol">ext4</filesystem>
+          <format config:type="boolean">false</format>
+          <loop_fs config:type="boolean">false</loop_fs>
+          <mountby config:type="symbol">device</mountby>
+          <partition_id config:type="integer">142</partition_id>
+          <partition_nr config:type="integer">2</partition_nr>
+          <raid_name>/dev/md1</raid_name>
+          <resize config:type="boolean">false</resize>
+          <size>max</size>
+        </partition>
+      </partitions>
+      <pesize></pesize>
+      <type config:type="symbol">CT_DISK</type>
+      <use>all</use>
+    </drive>
+RAID_DISK_EOF
+    done
+    echo "<!-- end of dynamic drive configuration (RAID_TOTAL = ${RAID_TOTAL}) -->" >> "${XML_FILE}"
+   
+fi
+
+# Make the necessary changes to the autoinst file, saving
+# them in /tmp/profile/modified.xml
+cat /tmp/profile/autoinst.xml       | \
+    sed -e "s/=LV01_SZ=/${LV01_SZ}MB/g" \
+        -e "s/=LV02_SZ=/${LV02_SZ}MB/g" \
+        -e "s/=LV03_SZ=/${LV03_SZ}MB/g" \
+        -e "s/=LV04_SZ=/${LV04_SZ}MB/g" \
+        -e "s/=LV05_SZ=/${LV05_SZ}MB/g" \
+        -e "s/=LV06_SZ=/${LV06_SZ}MB/g" \
+        -e "s/=LV07_SZ=/${LV07_SZ}MB/g" \
+        -e "s/=LV08_SZ=/${LV08_SZ}MB/g" \
+        -e "s/=LV09_SZ=/${LV09_SZ}MB/g" \
+        -e "s/=SWAP_SZ=/${SWAP_SZ}MB/g" \
+        -e '/^  <partitioning config:type="list">/ {
+            r /tmp/physical-layout.xml
+        }' > /tmp/profile/modified.xml
+                    ]]>
+                </source>
+            </script>
+        </pre-scripts>
+
+        <!-- 4.30.3 Chroot Environment Scripts -->
+        <chroot-scripts config:type="list">
+            <script>
+                <chrooted config:type="boolean">false</chrooted>
+                <debug config:type="boolean">true</debug>
+                <filename>copy-resolv-conf.sh</filename>
+                <interpreter>shell</interpreter>
+                <source>
+                    <![CDATA[#!/bin/bash
+# Copy resolv.conf into the image.  We need this so
+# the chrooted 'zypper addrepo' will succeed
+cp /etc/resolv.conf /mnt/etc/resolv.conf
+                    ]]>
+                </source>
+            </script>
+        </chroot-scripts>
+
+        <!-- 4.30.4 Post-Install Scripts -->
+        <post-scripts config:type="list">
+            <script>
+                <filename>post-install.sh</filename>
+                <interpreter>shell</interpreter>
+                <debug config:type="boolean">true</debug>
+                <source>
+                    <![CDATA[#!/bin/bash
+
+# Fixup etckeeper
+if [ -f /etc/etckeeper/etckeeper.conf ]
+then
+    cp /etc/etckeeper/etckeeper.conf /etc/etckeeper/etckeeper.conf.orig
+    ( cat /etc/etckeeper/etckeeper.conf | \
+      sed -e 's/^#VCS=\"hg\"/VCS=\"hg\"/'  \
+          -e 's/^VCS=git/#VCS=\"git\"/'
+    ) > /etc/etckeeper/etckeeper.conf.new
+    mv /etc/etckeeper/etckeeper.conf.new /etc/etckeeper/etckeeper.conf
+    etckeeper init
+    etckeeper commit "Initial commit of base system"
+fi
+
+# Force root password change
+chage -d 0 root
+etckeeper commit "Force root to change password"
+                    ]]>
+                </source>
+            </script>
+        </post-scripts>
+
+        <!-- 4.30.5 Init Scripts -->
+    </scripts>
+
+    <!-- ?.?: TIMEZONE -->
+    <timezone>
+        <hwclock>UTC</hwclock>
+        <timezone>America/New_York</timezone>
+    </timezone>
+
+    <!-- ?.?: FIREWALL -->
+    <firewall>
+        <enable_firewall config:type="boolean">false</enable_firewall>
+        <start_firewall config:type="boolean">false</start_firewall>
+    </firewall>
+
+    <!-- ?.?: PRINTER -->
+
+    <!-- ?.?: KEYBOARD -->
+    <keyboard>
+        <keyboard_values>
+            <delay/>
+            <discaps config:type="boolean">false</discaps>
+            <numlock>bios</numlock>
+            <rate/>
+        </keyboard_values>
+        <keymap>english-us</keymap>
+    </keyboard>
+
+    <!-- ?.?: LANGUAGE -->
+    <language>
+        <language>en_US</language>
+        <languages/>
+    </language>
+
+</profile>
