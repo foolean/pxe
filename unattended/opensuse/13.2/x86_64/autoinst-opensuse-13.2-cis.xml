@@ -869,6 +869,25 @@ then
     etckeeper commit "Initial commit of base system"
 fi
 
+# Set the initial Puppet configuration
+cp /etc/puppet/puppet.conf /etc/puppet/puppet.conf.orig
+cat << EOF > /etc/puppet/puppet.conf
+[main]
+logdir=/var/log/puppet
+vardir=/var/lib/puppet
+manifestdir=/var/lib/puppet/manifests
+ssldir=/var/lib/puppet/ssl
+rundir=/var/run/puppet
+factpath=\$vardir/lib/facter
+pluginsync=true
+runinterval=315569260
+server=puppet
+summarize=true
+show_diff = true
+listen=false
+EOF
+etckeeper commit "Set basic puppet.conf"
+
 # CIS: 2.14 Add nodev Option to /dev/shm Partition
 # CIS: 2.15 Add nosuid Option to /dev/shm Partition
 # CIS: 2.16 Add noexec Option to /dev/shm Partition
