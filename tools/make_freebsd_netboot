@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+# FILENAME: make_freebsd_netboot
+# AUTHOR:   Bennett Samowich <bennett@foolean.org>
+# DATE:     2015-12-31
+#
+# DESCRIPTION:
+#   Create FreeBSD netboot image.  This script will create a FreeBSD netboot
+#   image.  At this time, it must be run on a FreeBSD system and will create
+#   a netboot image for the same release and architecture as the build system.
+#
+###############################################################################
+
+# http://louwrentius.com/freebsd-101-unattended-install-over-pxe-http-no-nfs.html
+
+# The URL to the bsdinstall(8) installerconfig file to download
+installerconfig="http://replace-with-your-url-here"
+
+# Activate package management
+env ASSUME_ALWAYS_YES=yes pkg bootstrap
+
+# Download mfsbsd v2.2
+fetch --no-verify-peer -o mfsbsd-2.2.tar.gz https://github.com/mmatuska/mfsbsd/archive/2.2.tar.gz
+tar xvzf mfsbsd-2.2.tar.gz
+
+# Download and mountthe FreeBSD ISO
+fetch http://ftp.freebsd.org/pub/FreeBSD/releases/ISO-IMAGES/$(uname -r | cut -f1 -d-)/FreeBSD-$(uname -r)-$(uname -m)-disc1.iso
+mkdir /cdrom/
+mdconfig -a -t vnode -f /root/FreeBSD-$(uname -r)-$(uname -m)-disc1.iso
+mount_cd9660 /dev/md0 /cdrom/
+
+# Setup rc.local
+cd mfsbsd-2.2
+cat << EOF >> conf/rc.local
+# Download the bsdinstall 'installerconfig' file
+installerconfig="${installerconfig}"
+fetch "\${installerconfig}" -o /etc/installerconfig
+
+# Create the installer start script
+cat << EOF_START_SCRIPT > /tmp/start.sh
+#!/bin/csh
+setenv DISTRIBUTIONS "kernel.txz base.txz"
+setenv BSDINSTALL_DISTDIR /tmp
+setenv BSDINSTALL_DISTSITE ftp://ftp.freebsd.org/pub/FreeBSD/releases/$(uname -m)/$(uname -r)
+setenv installerconfig "\${installerconfig}"
+
+bsdinstall distfetch 
+bsdinstall script /etc/installerconfig
+EOF_START_SCRIPT
+
+# ... and run it
+chmod 700 /tmp/start.sh
+/tmp/start.sh
+
+# ... and done
+exit 0
+EOF
+
+# ... mfsbsd looks for pkg-static in the tools directory. (*shrug*)
+ln -s /usr/local/sbin/pkg-static tools/pkg-static
+
+# Build the PXE bootable image
+make
