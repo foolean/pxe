@@ -59,45 +59,60 @@
 #
 ###############################################################################
 
-PARTITIONS=$(
-    SWAP_SZ=4096
-    LV01_SZ=896
-    LV02_SZ=4096
-    LV03_SZ=7168
-    LV04_SZ=4096
-    LV05_SZ=512
-    LV06_SZ=4096
-    LV07_SZ=4096
-    LV08_SZ=8192
+# Default partition sizes
+SWAP_SZ=4096
+LV01_SZ=896
+LV02_SZ=4096
+LV03_SZ=7168
+LV04_SZ=4096
+LV05_SZ=512
+LV06_SZ=4096
+LV07_SZ=4096
+LV08_SZ=8192
 
-    SMALLEST_DISK=8000000000
-
-    if [ ${SMALLEST_DISK} -lt 40000000000 ]; then
-        SWAP_SZ=384;
-        LV01_SZ=800;
-        LV02_SZ=32;
-        LV03_SZ=512;                                      
-        LV04_SZ=1280;
-        LV05_SZ=256;
-        LV06_SZ=256;
-        LV07_SZ=256;
-        LV08_SZ=1024;
-    fi
-
-    echo "
-        da0 {
-            ${LV01_SZ}M freebsd-ufs /,
-            ${SWAP_SZ}M freebsd-swap,
-            ${LV02_SZ}M freebsd-ufs /home,
-            ${LV03_SZ}M freebsd-ufs /var,
-            ${LV04_SZ}M freebsd-ufs /usr,
-            ${LV05_SZ}M freebsd-ufs /usr/local,
-            ${LV06_SZ}M freebsd-ufs /tmp,
-            ${LV07_SZ}M freebsd-ufs /var/tmp,
-            ${LV08_SZ}M freebsd-ufs /var/log
-        }
-    "
+# Get the smallest disk size
+SMALLEST_DISK=$(
+    dmesg | grep "sectors"                        | \
+    awk '{sub("MB","",$2); print ($2 * 1048576)}' | \
+    sort -un | head -n1
 )
+
+# Get the first disk
+FIRST_DISK=$(
+    dmesg | grep "sectors"           | \
+    awk '{sub(":","",$1); print $1}' | \
+    sort -u | head -n1
+)
+
+# Use a smaller layout if the disk is smaller than 40G
+if [ ${SMALLEST_DISK} -lt 40000000000 ]; then
+    SWAP_SZ=384;
+    LV01_SZ=800;
+    LV02_SZ=32;
+    LV03_SZ=512;
+    LV04_SZ=1280;
+    LV05_SZ=256;
+    LV06_SZ=256;
+    LV07_SZ=256;
+    LV08_SZ=1024;
+fi
+
+# Configure the partitions
+PARTITIONS="
+    ${FIRST_DISK} {
+        ${LV01_SZ}M freebsd-ufs /,
+        ${SWAP_SZ}M freebsd-swap,
+        ${LV02_SZ}M freebsd-ufs /home,
+        ${LV03_SZ}M freebsd-ufs /var,
+        ${LV04_SZ}M freebsd-ufs /usr,
+        ${LV05_SZ}M freebsd-ufs /usr/local,
+        ${LV06_SZ}M freebsd-ufs /tmp,
+        ${LV07_SZ}M freebsd-ufs /var/tmp,
+        ${LV08_SZ}M freebsd-ufs /var/log
+    }
+"
+
+# Configure the installer
 DISTRIBUTIONS="kernel.txz base.txz"
 BSDINSTALL_DISTDIR=/tmp
 BSDINSTALL_DISTSITE=ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/10.2-RELEASE
@@ -124,6 +139,7 @@ echo "Installing packages"
 pkg install -y mercurial
 
 echo "Putting /etc under version control"
+PATH="${PATH}:/usr/local/bin"
 hg --cwd /etc  init
 hg --cwd /etc addremove
 hg --cwd /etc commit -u "installer" -m "Initial commit"
