@@ -1,0 +1,484 @@
+#
+# FILENAME:     installerconfig
+# DATE:         2015-12-31
+# AUTHOR:       Bennett Samowich <bennett@foolean.org>
+#
+# DESCRIPTION:
+#   Unattended installerconfig file for FreeBSD 10.1
+#
+# NOTES:
+#   This file relies on the 'installerconfig' variable existing and
+#   containing the URL to the location that the file was downloaded.
+#   It is ultimately used to generate the /etc/build-info file.
+#
+#   Partition Sizing (smallest disk < 40G)
+#   =======================================
+#   Swap            384(MB)
+#   /               800(MB)
+#   /boot           256(MB)
+#   /home           32(MB)      [ nodev ]
+#   /var            512(MB)
+#   /usr            1280(MB)
+#   /usr/local      256(MB)
+#   /tmp            256(MB)     [ nodev, nosuid, noexec ]
+#   /var/tmp        256(MB)     [ nodev, nosuid, noexec ]
+#   /var/log        1024(MB)
+#   /var/log/audit  1024(MB)
+#
+#   Partition Sizing (smallest disk >= 40G)
+#   =======================================
+#   Swap            4096(MB)
+#   /               896(MB)
+#   /boot           256(MB)
+#   /home           4096(MB)    [ nodev ]
+#   /var            7168(MB)
+#   /usr            4096(MB)
+#   /usr/local      512(MB)
+#   /tmp            4096(MB)    [ nodev, nosuid, noexec ]
+#   /var/tmp        4096(MB)    [ nodev, nosuid, noexec ]
+#   /var/log        8192(MB)
+#   /var/log/audit  8192(MB)
+#
+#   Initial Passwords
+#   =================
+#
+#   The initial root and boot menu password is 'changeme'.
+#
+#   You will be prompted to change the root password at first login.
+#
+#   CIS Benchmark Compliance
+#   ========================
+#
+#   This installerconfig attempts to create a CIS compliant system. The
+#   settings are based on the FreeBSD Benchmark v1.0.5 dated 2005-10-21.
+#   This benchmark is slightly out of date so additional best practices
+#   from other benchmarks are also included.
+#
+#   [ CIS Benchmark Download ]
+#   https://benchmarks.cisecurity.org/downloads/show-single/?file=freebsd.105
+#
+###############################################################################
+
+# Default partition sizes
+SWAP_SZ=4096
+LV01_SZ=896
+LV02_SZ=4096
+LV03_SZ=7168
+LV04_SZ=4096
+LV05_SZ=512
+LV06_SZ=4096
+LV07_SZ=4096
+LV08_SZ=8192
+
+# Get the smallest disk size
+SMALLEST_DISK=$(
+    dmesg | grep "sectors"                        | \
+    awk '{sub("MB","",$2); print ($2 * 1048576)}' | \
+    sort -un | head -n1
+)
+
+# Get the first disk
+FIRST_DISK=$(
+    dmesg | grep "sectors"           | \
+    awk '{sub(":","",$1); print $1}' | \
+    sort -u | head -n1
+)
+
+# Use a smaller layout if the disk is smaller than 40G
+if [ ${SMALLEST_DISK} -lt 40000000000 ]; then
+    SWAP_SZ=384;
+    LV01_SZ=800;
+    LV02_SZ=32;
+    LV03_SZ=512;
+    LV04_SZ=1280;
+    LV05_SZ=256;
+    LV06_SZ=256;
+    LV07_SZ=256;
+    LV08_SZ=1024;
+fi
+
+# Configure the partitions
+PARTITIONS="
+    ${FIRST_DISK} {
+        ${LV01_SZ}M freebsd-ufs /,
+        ${SWAP_SZ}M freebsd-swap,
+        ${LV02_SZ}M freebsd-ufs /home,
+        ${LV03_SZ}M freebsd-ufs /var,
+        ${LV04_SZ}M freebsd-ufs /usr,
+        ${LV05_SZ}M freebsd-ufs /usr/local,
+        ${LV06_SZ}M freebsd-ufs /tmp,
+        ${LV07_SZ}M freebsd-ufs /var/tmp,
+        ${LV08_SZ}M freebsd-ufs /var/log
+    }
+"
+
+# Configure the installer
+DISTRIBUTIONS="kernel.txz base.txz"
+BSDINSTALL_DISTDIR=/tmp
+BSDINSTALL_DISTSITE=ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/10.1-RELEASE
+
+#!/bin/sh
+
+echo "Saving build information"
+fetch "${installerconfig}" -o /tmp/installerconfig
+SIZE=$(ls -l /tmp/installerconfig | awk '{print $5}')
+GIT_SHA=$( ( printf "blob ${SIZE}\0"; cat /tmp/installerconfig ) | sha1)
+( echo "date:             $(date)"
+  echo ""
+  echo "installerconfig:  ${installerconfig}"
+  echo "git-sha:          ${GIT_SHA}"
+  echo "sha1:             $(sha1 /tmp/installerconfig | awk '{print $4}')"
+  echo "sha256:           $(sha256 /tmp/installerconfig | awk '{print $4}')"
+) > /etc/build-info
+chmod 0000 /etc/build-info
+
+echo "Setting up package management"
+env ASSUME_ALWAYS_YES=yes pkg bootstrap
+
+echo "Installing packages"
+pkg install -y mercurial
+
+echo "Putting /etc under version control"
+PATH="${PATH}:/usr/local/bin"
+hg --cwd /etc  init
+hg --cwd /etc addremove
+hg --cwd /etc commit -u "installer" -m "Initial commit"
+
+# Set the root password
+echo "Setting root password"
+echo "changeme" | pw user mod root -h 0
+pw user mod root -p 1-Jan-2000
+hg --cwd /etc commit -u "installer" -m "Set root password"
+
+echo "Looking for system updates"
+# Remove src from update since it's not installed
+# See https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=198030
+sed -i -e 's/^\(Components .*\)src\(.*\)/\1\2/' /etc/freebsd-update.conf
+env PAGER=cat freebsd-update fetch
+freebsd-update install
+env ASSUME_ALWAYS_YES=YES pkg update -f
+hg --cwd /etc commit -u "installer" -m "Installed system updates"
+
+echo "Installing additional packages"
+env ASSUME_ALWAYS_YES=YES pkg install puppet
+
+echo "Setting password complexity"
+sed -i -e 's/^.*\(password.*pam_passwdqc.so.*\)\(enforce=\)\(.*\)/\1min=disabled,disabled,disabled,disabled,14 similar=deny retry=3 passphrase=0 random=0 match=0 \2everyone/' /etc/pam.d/passwd
+hg --cwd /etc commit -u "installer" -m "Set password complexity"
+
+echo "Applying basic settings"
+cat << EOF >> /etc/rc.conf
+# Set hostname and DHCP
+hostname="unattended"
+ifconfig_em0="DHCP"
+
+# Don't update /etc/motd with OS information
+update_motd="NO"
+
+# Disable SSH
+sshd_enable="NO"
+
+# Enable NTP and sync on boot
+ntpd_enable="YES"
+ntpd_sync_on_start="YES"
+
+# Set dumpdev to "AUTO" to enable crash dumps, "NO" to disable
+dumpdev="AUTO"
+EOF
+hg --cwd /etc commit -u "installer" -m "Applying basic settings"
+
+echo "Setting autoboot delay"
+cat << EOF >> /boot/loader.conf
+
+# Boot delay of 5 seconds
+autoboot_delay="5"
+EOF
+
+echo "Applying CIS Benchmark"
+
+# CIS: 1.2. Enable SSH
+awk '/^#Protocol/        { $2 = "2" };                \
+     /^#Protocol/        { $1 = "Protocol" };         \
+     /^#PermitRootLogin/ { $1 = "PermitRootLogin" };  \
+     /^#Bannerr/         { $2 = "/etc/motd" };        \
+     /^#Banner/          { $1 = "Banner" };           \
+     {print}' /etc/ssh/sshd_config > /etc/ssh/sshd_config.new
+mv /etc/ssh/sshd_config.new /etc/ssh/sshd_config
+chmod 600 /etc/ssh/sshd_config
+hg --cwd /etc commit -u "installer" -m "CIS: 1.2. Enable SSH"
+
+# CIS: 1.3. Enable TCP Wrappers and a host based firewall
+cat << EOF >> /etc/rc.conf
+
+# CIS: 1.3. Enable TCP Wrappers and a host based firewall
+inetd_enable="YES"
+inetd_flags="-Wwl -C60"
+pf_enable="YES"
+pflog_enable="YES"
+pf_flags=""
+pflog_logfile="/var/log/pflog"
+pf_rules="/etc/pf.conf" 
+EOF
+cat << EOF >> /boot/loader.conf
+
+# Load the PF kernel module
+pf_load="YES"
+EOF
+mkdir /etc/pf/
+cp /usr/share/examples/pf/pf.conf /etc/pf/
+ln -s /etc/pf/pf.conf /etc/pf.conf
+hg --cwd /etc commit -u "installer" -m "CIS: 1.3. Enable TCP Wrappers and a host based firewall"
+
+# CIS: 3.1. Disable login prompts on serial ports
+awk '($4 == "dialup") { $5 = "off" } { print }' /etc/ttys > /etc/ttys.new
+mv /etc/ttys.new /etc/ttys
+hg --cwd /etc commit -u "installer" -m "CIS: 3.1. Disable login prompts on serial ports"
+
+# CIS: 3.2. Set password on single user console
+awk '($1 == "console") { $5 = "insecure" } { print }' /etc/ttys > /etc/ttys.new
+mv /etc/ttys.new /etc/ttys
+hg --cwd /etc commit -u "installer" -m "CIS: 3.2. Set password on single user console"
+
+# CIS: 3.4. Prevent syslogd from accepting messages from the network
+cat << EOF >> /etc/rc.conf
+
+# CIS: 3.4. Prevent syslogd from accepting messages from the network
+syslogd_flags="-s"
+EOF
+hg --cwd /etc commit -u "installer" -m "CIS: 3.4. Prevent syslogd from accepting messages from the network"
+
+# CIS: 3.5. Disable the email server if possible
+cat<<EOF>> /etc/rc.conf
+
+# CIS: 3.5. Disable the email server if possible
+sendmail_enable="NO"
+sendmail_submit_enable="NO"
+sendmail_outbound_enable="NO"
+sendmail_msp_queue_enable="NO"
+EOF
+hg --cwd /etc commit -u "installer" -m "CIS: 3.5. Disable the email server if possible"
+
+# CIS: 3.10. Block NFS connections to non-privileged ports
+cat << EOF >> /etc/rc.conf
+
+# CIS: 3.10. Block NFS connections to non-privileged ports
+nfs_reserved_port_only="YES"
+EOF
+hg --cwd /etc commit -u "installer" -m "CIS: 3.10. Block NFS connections to non-privileged ports"
+
+# CIS: 3.11. Block non-privileged mountd requests
+cat << EOF >> /etc/rc.conf
+
+# CIS: 3.11. Block non-privileged mountd requests
+weak_mountd_authentication="NO"
+EOF
+hg --cwd /etc commit -u "installer" -m "CIS: 3.11. Block non-privileged mountd requests"
+
+# CIS: 4.1. Disable core dumps
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 4.1. Disable core dumps
+kern.coredump=0
+EOF
+hg --cwd /etc commit -u "installer" -m "CIS: 4.1. Disable core dumps"
+
+# CIS: 4.2. Set a default secure level
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 4.2. Set a default secure level
+kern.securelevel=1
+EOF
+hg --cwd /etc commit -u "installer" -m "CIS: 4.2. Set a default secure level"
+
+# CIS: 4.3. Block users from viewing unowned processes
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 4.3. Block users from viewing unowned processes
+security.bsd.see_other_uids=0
+EOF
+hg --cwd /etc commit -u "installer" -m "CIS: 4.3. Block users from viewing unowned processes"
+
+# CIS: 4.4. Block users from viewing processes in other groups
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 4.4. Block users from viewing processes in other groups
+security.bsd.see_other_gids=0
+EOF
+hg --cwd /etc commit -u "installer" -m "CIS: 4.4. Block users from viewing processes in other groups"
+
+# CIS: 5.1. Capture ftpd and inetd information
+cat << EOF >> /etc/syslog.conf
+
+# CIS: 5.1. Capture ftpd and inetd information
+daemon.debug                                    /var/log/daemon.log
+EOF
+touch /var/log/daemon.log
+chown root:wheel /var/log/daemon.log
+chmod 600 /var/log/daemon.log
+hg --cwd /etc commit -u "installer" -m "CIS: 5.1. Capture ftpd and inetd information"
+
+# CIS: 5.2. Enable system accounting
+touch /var/account/acct
+accton /var/account/acct
+cat << EOF >> /etc/rc.conf
+
+# CIS: 5.2. Enable system accounting
+accounting_enable="YES"
+EOF
+hg --cwd /etc commit -u "installer" -m "CIS: 5.2. Enable system accounting"
+
+# CIS: 5.3. Enable logging of packets received on closed ports
+cat << EOF >> /etc/sysctl.conf
+
+# CIS: 5.3. Enable logging of packets received on closed ports
+net.inet.tcp.log_in_vain=1
+net.inet.udp.log_in_vain=1
+EOF
+hg --cwd /etc commit -u "installer" -m "CIS: 5.3. Enable logging of packets received on closed ports"
+
+# CIS: 5.4. Set permissions on system log files
+chmod g-w,o-r /var/log/*
+chmod a+r /var/log/wtmp
+
+# CIS: 5.5. Configure newsyslog for secure file permissions
+sed -i -e 's/644/600/g' /etc/newsyslog.conf
+sed -i -e 's/640/600/g' /etc/newsyslog.conf
+awk '($1 == "/var/log/wtmp") { $4 = "644" };             \
+($1 == "/var/log/lastlog") { $4 = "644" } { print }'     \
+/etc/newsyslog.conf > /etc/newsyslog.conf.new
+mv /etc/newsyslog.conf.new /etc/newsyslog.conf
+hg --cwd /etc commit -u "installer" -m "CIS: 5.5. Configure newsyslog for secure file permissions"
+
+# CIS: 5.6. Configure periodic log files
+cat << EOF >> /etc/periodic.conf
+# CIS: 5.6. Configure periodic log files
+daily_output=/var/log/daily.log
+EOF
+cat << EOF >> /etc/newsyslog.conf
+
+# CIS: 5.6. Configure periodic log files
+/var/log/daily.log root:wheel           600  7     100  @T23  C
+EOF
+hg --cwd /etc commit -u "installer" -m "CIS: 5.6. Configure periodic log files"
+
+# CIS: 6.1. Add nosuid option to /etc/fstab
+sed -i -e 's/^\(.*	\/home	.*rw\)\(.*\)/\1,nosuid\2/' /etc/fstab
+sed -i -e 's/^\(.*	\/tmp	.*rw\)\(.*\)/\1,nosuid,noexec\2/' /etc/fstab
+sed -i -e 's/^\(.*	\/var\/tmp	.*rw\)\(.*\)/\1,nosuid,noexec\2/' /etc/fstab
+hg --cwd /etc commit -u "installer" -m "CIS: 6.1. Add nosuid option to /etc/fstab"
+
+# CIS: 6.2. Verify passwd, master.passwd, and group file permissions
+chown root:wheel /etc/passwd /etc/master.passwd /etc/group /etc/pwd.db /etc/spwd.db
+chmod 644 /etc/passwd /etc/group /etc/pwd.db
+chmod 600 /etc/master.passwd /etc/spwd.db
+hg --cwd /etc commit -u "installer" -m "CIS: 6.2. Verify passwd, master.passwd, and group file permissions"
+
+# CIS: 6.3. Set sticky bit on world writable directories
+for FS in $(awk '($3 == "ufs")  { print $2 }' /etc/fstab)
+do
+    find -x -f $FS \( -type directory -perm -0002 -a ! -perm -1000 \) -exec chmod 1777 {} \; ;
+done
+
+# CIS: 6.6. User home directories should be kept private
+for x in $(awk -F: '($3 >= 1001) && ($3 != 65534) {print $6}' /etc/passwd)
+do
+    chmod -H 0700 $x
+done
+
+# CIS: 7.1. Remove weak authentication services from PAM
+sed -i -e 's/nologin/deny/g' /etc/pam.d/rsh /etc/pam.d/rexecd
+hg --cwd /etc commit -u "installer" -m "CIS: 7.1. Remove weak authentication services from PAM"
+
+# CIS: 7.2. All .rhosts files should be readable only by their owner
+find / -type file -name '.rhosts' | xargs chmod 600
+
+# CIS: 7.3. Symlink hosts.equiv to /dev/null
+rm /etc/hosts.equiv && ln -s /dev/null /etc/hosts.equiv
+grep -v 'pam_rhosts' /etc/pam.d/rsh > /etc/pam.d/rsh.new
+mv /etc/pam.d/rsh.new /etc/pam.d/rsh
+hg --cwd /etc commit -u "installer" -m "CIS: 7.3. Symlink hosts.equiv to /dev/null"
+
+# CIS: 7.4. Restrict at/cron to authorized users
+echo 'root' > /var/cron/allow
+echo 'root' > /var/at/allow
+chown root:wheel /var/cron/allow /var/at/allow
+chmod 400 /var/cron/allow /var/at/allow
+chmod 0640 /etc/crontab
+hg --cwd /etc commit -u "installer" -m "CIS: 7.4. Restrict at/cron to authorized users"
+
+# CIS: 7.5. Create warning banners for the system
+cat << EOF > /etc/issue
+Authorized users only.
+All activity may be monitored and reported.
+
+EOF
+cat << EOF > /etc/issue.net
+Authorized users only.
+All activity may be monitored and reported.
+
+EOF
+cat << EOF > /etc/motd
+
+Use of this system implies the acceptance of such monitoring.
+
+EOF
+chmod 0644 /etc/motd
+chmod 0644 /etc/issue
+chmod 0644 /etc/issue.net
+hg --cwd /etc commit -u "installer" -m "CIS: 7.5. Create warning banners for the system"
+
+# Remove OS information from login banner
+sed -i -e 's/^\(.*im=\).*\(:sp.*\)/\1\\r\\n\2/' /etc/gettytab
+hg --cwd /etc commit -u "installer" -m "Remove OS information from login banner"
+
+# CIS: 8.1. Block system accounts
+pw moduser uucp -s /sbin/nologin
+hg --cwd /etc commit -u "installer" -m "CIS: 8.1. Block system accounts"
+
+# CIS: 8.3. Set account expiration parameters on all active user accounts
+for x in $(awk -F: '($3 >= 1001) && ($3 != 65534) { print $1 }' /etc/passwd)
+do
+    pw usermod $x -e +91d
+done
+hg --cwd /etc commit -u "installer" -m "CIS: 8.3. Set account expiration parameters on all active user accounts"
+
+# CIS: 8.4. Create default adduser.conf file
+cat << EOF >> /etc/adduser.conf
+# Configuration file for adduser(8).
+# NOTE: only *some* variables are saved.
+defaultLgroup=
+defaultclass=default
+defaultgroups=
+passwdtype=yes
+homeprefix=/home
+defaultshell=/bin/csh
+udotdir=/usr/share/skel
+msgfile=/etc/adduser.msg
+disableflag=
+upwexpire=91d
+uexpire=
+EOF
+hg --cwd /etc commit -u "installer" -m "CIS: 8.4. Create default adduser.conf file"
+
+# CIS: 8.5. Remove the toor user
+pw deluser toor
+hg --cwd /etc commit -u "installer" -m "CIS: 8.5. Remove the toor user"
+
+# CIS: 8.8. Set default umask for users
+sed -i -e 's/umask=022/umask=077/' /etc/login.conf
+for x in /etc/profile /etc/csh.login /etc/csh.cshrc
+do
+    echo "umask 077" >> $x
+done
+find /usr/share/skel -name 'dot*' |\
+    xargs sed -i -e 's/22/77/g'
+hg --cwd /etc commit -u "installer" -m "CIS: 8.8. Set default umask for users"
+
+# CIS: 8.9 Set "mesg n" as the default for all users
+sed -i -e 's/#[[:space:]]mesg[[:space:]]y/mesg n/g' /etc/profile
+sed -i -e 's/#[[:space:]]mesg[[:space:]]y/mesg n/g' /etc/csh.login
+hg --cwd /etc commit -u "installer" -m "CIS: 8.9 Set \"mesg n\" as the default for all users"
+
+cp /etc/motd /tmp/motd
+echo "Rebooting into new system"
+reboot
