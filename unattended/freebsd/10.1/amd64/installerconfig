@@ -16,28 +16,26 @@
 #   Swap            384(MB)
 #   /               800(MB)
 #   /boot           256(MB)
-#   /home           32(MB)      [ nodev ]
+#   /home           32(MB)      [ nosuid ]
 #   /var            512(MB)
-#   /usr            1280(MB)
-#   /usr/local      256(MB)
-#   /tmp            256(MB)     [ nodev, nosuid, noexec ]
-#   /var/tmp        256(MB)     [ nodev, nosuid, noexec ]
+#   /usr            768(MB)
+#   /usr/local      512(MB)
+#   /tmp            256(MB)     [ nosuid, noexec ]
+#   /var/tmp        256(MB)     [ nosuid, noexec ]
 #   /var/log        1024(MB)
-#   /var/log/audit  1024(MB)
 #
 #   Partition Sizing (smallest disk >= 40G)
 #   =======================================
 #   Swap            4096(MB)
 #   /               896(MB)
 #   /boot           256(MB)
-#   /home           4096(MB)    [ nodev ]
+#   /home           4096(MB)    [ nosuid ]
 #   /var            7168(MB)
 #   /usr            4096(MB)
 #   /usr/local      512(MB)
-#   /tmp            4096(MB)    [ nodev, nosuid, noexec ]
-#   /var/tmp        4096(MB)    [ nodev, nosuid, noexec ]
+#   /tmp            4096(MB)    [ nosuid, noexec ]
+#   /var/tmp        4096(MB)    [ nosuid, noexec ]
 #   /var/log        8192(MB)
-#   /var/log/audit  8192(MB)
 #
 #   Initial Passwords
 #   =================
@@ -90,8 +88,8 @@ if [ ${SMALLEST_DISK} -lt 40000000000 ]; then
     LV01_SZ=800;
     LV02_SZ=32;
     LV03_SZ=512;
-    LV04_SZ=1280;
-    LV05_SZ=256;
+    LV04_SZ=768;
+    LV05_SZ=512;
     LV06_SZ=256;
     LV07_SZ=256;
     LV08_SZ=1024;
