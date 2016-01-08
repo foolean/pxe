@@ -78,6 +78,7 @@ usage() {
     echo "                  (default: ${USER})"
     echo "  -p [ DIR ]      Root path to store the netboot files"
     echo "                  (default: ${PKGDIR})"
+    echo "  -P              Prune EOL releases"
     echo "  -r [ RELEASE ]  Operating sytem release to download"
     echo "  -v              Print more verbose output"
     exit 1
