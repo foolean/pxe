@@ -3,3 +3,19 @@ unattended-os-install
 
 A collection of files (e.g. preseed, kickstart, autoyast) for unattended
 installs of various operating systems.
+
+Usage
+=====
+
+This repository is organized in such a way that it can be place in some common
+location such as /opt and then symlinked into tftp and web space.
+
+Example:
+
+    cd /opt
+    git clone https://github.com/foolean/pxe
+    ln -s /opt/pxe/tftp /srv/tftp
+    ln -s /opt/pxe/www  /var/www/html/install
+
+The various netboot images can be downloaded once the basic structure is
+established.
