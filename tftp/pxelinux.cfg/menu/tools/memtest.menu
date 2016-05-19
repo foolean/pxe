@@ -1,0 +1,8 @@
+LABEL memtest
+    MENU LABEL ^MemTest...... Memtest++
+    KERNEL /packages/memtest/memtest86+
+    TEXT HELP
+    Memtest86 is a thorough, stand alone memory test for x86 architecture
+    computers. BIOS based memory tests are a quick, cursory check and often
+    miss many of the failures that are detected by Memtest86.
+    ENDTEXT

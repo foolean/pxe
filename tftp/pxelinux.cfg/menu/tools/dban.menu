@@ -1,0 +1,64 @@
+#
+PROMPT 0
+
+MENU TITLE DBAN Wiping
+MENU INCLUDE /pxelinux.cfg/graphics.cfg
+
+LABEL void
+    MENU LABEL
+
+LABEL void
+    MENU LABEL [ Manual wiping ]
+
+ LABEL dban_zero_manual
+    MENU LABEL DBAN......... Secure drive wiping (zero) manual
+    KERNEL /packages/dban/dban.bzi
+    APPEND load_ramdisk=1 root=/dev/ram0 init=/rc nuke="dwipe --method zero --verify last --prng twister --rounds 1"
+    TEXT HELP
+    Single pass of zeros.
+    Manual start required.
+    ENDTEXT
+
+ LABEL dban_random_zero_manual
+    MENU LABEL DBAN......... Secure drive wiping (random+zero) manual
+    KERNEL /packages/dban/dban.bzi
+    APPEND load_ramdisk=1 root=/dev/ram0 init=/rc nuke="dwipe --method random --verify last --prng twister --rounds 1"
+    TEXT HELP
+    Single pass of random data followed by a
+    single pass of zeros.
+    Manual start required.
+    ENDTEXT
+
+LABEL void
+    MENU LABEL
+
+LABEL void
+    MENU LABEL [ Auto Wiping ]
+
+ LABEL dban_zero_auto
+    MENU LABEL DBAN......... Secure drive wiping (zero) auto
+    KERNEL /packages/dban/dban.bzi
+    APPEND load_ramdisk=1 root=/dev/ram0 init=/rc nuke="dwipe --method zero --verify last --prng twister --rounds 1  --autonuke"
+    TEXT HELP
+    Single pass of zeros.
+    This will immediately start wiping ALL disks
+    ENDTEXT
+
+ LABEL dban_random_zero_auto
+    MENU LABEL DBAN......... Secure drive wiping (random+zero) auto
+    KERNEL /packages/dban/dban.bzi
+    APPEND load_ramdisk=1 root=/dev/ram0 init=/rc nuke="dwipe --method random --verify last --prng twister --rounds 1  --autonuke"
+    TEXT HELP
+    Single pass of random data followed by a
+    single pass of zeros.
+    This will immediately start wiping ALL disks
+    ENDTEXT
+
+
+LABEL void
+    MENU LABEL
+
+LABEL Main Menu
+    MENU LABEL Return to ^Main Menu
+    KERNEL /vesamenu.c32
+    APPEND /pxelinux.cfg/default

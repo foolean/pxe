@@ -1,0 +1,120 @@
+# tftpd-hpa remap file
+#
+#   r      Replace  the  substring  matched  by  regex  by  the replacement
+#          pattern.  The replacement pattern may contain escape  sequences;
+#          see below.
+#
+#   g      Repeat  this  rule  until  it no longer matches.  This is always
+#          used with r.
+#
+#   i      Match the regex  case-insensitively.   By  default  it  is  case
+#          sensitive.
+#
+#   e      If  this  rule  matches, end rule processing after executing the
+#          rule.
+#
+#   s      If this rule matches, start rule processing over from  the  very
+#          first rule after executing this rule.
+#
+#   a      If  this  rule  matches,  refuse  the request and send an access
+#          denied error to the client.
+#
+#   G      This rule applies to GET (RRQ) requests only.
+#
+#   P      This rule applies to PUT (WRQ) requests only.
+#
+#   ~      Inverse the sense of this rule, i.e. execute the operation  only
+#          if the regex doesn't match.  Cannot used together with r.
+#
+#   The   following   escape  sequences  are  recognized  as  part  of  the
+#   replacement pattern:
+#
+#   \0     The entire string matched by the regex.
+#
+#   \1 to \9
+#          The strings matched by each  of  the  first  nine  parenthesized
+#          subexpressions, \( ... \), of the regex pattern.
+#
+#   \i     The  IP  address of the requesting host, in dotted-quad notation
+#          (e.g. 192.0.2.169).
+#
+#   \x     The IP address of the requesting host, in  hexadecimal  notation
+#          (e.g. C00002A9).
+#
+#   \\     Literal backslash.
+#
+#   \whitespace
+#          Literal whitespace.
+#
+#   \#     Literal hash mark.
+#
+#   \U     Turns all subsequent letters to upper case.
+#
+#   \L     Turns all subsequent letters to lower case.
+#
+#   \E     Cancels the effect of \U or \L.
+#
+#   If  the  mapping  file  is  changed,  you  need  to  send SIGHUP to any
+#   outstanding tftpd process.
+#
+#   PXE File Precedence
+#   ===================
+#
+#   Assuming:
+#       * Client UUID is "b8945908-d6a6-41a9-611d-74a6ab80b83d"; and,
+#       * Ethernet MAC address is "88:99:AA:BB:CC:DD"; and,
+#       * IP address is "192.168.2.91", or in uppercase hexadecimal, "C0A8025B";
+#
+#   PXELINUX will try the following configuration files (in this order):
+#       pxelinux.cfg/b8945908-d6a6-41a9-611d-74a6ab80b83d
+#       pxelinux.cfg/01-88-99-aa-bb-cc-dd
+#       pxelinux.cfg/C0A8025B
+#       pxelinux.cfg/C0A8025
+#       pxelinux.cfg/C0A802
+#       pxelinux.cfg/C0A80
+#       pxelinux.cfg/C0A8
+#       pxelinux.cfg/C0A
+#       pxelinux.cfg/C0
+#       pxelinux.cfg/C
+#       pxelinux.cfg/default
+#
+###############################################################################
+
+#------------------------------------------------------------------------------
+# Local client mappings
+#------------------------------------------------------------------------------
+
+#
+# Place any local client mappings here
+#
+
+#------------------------------------------------------------------------------
+# Microsoft Windows mappings 
+#------------------------------------------------------------------------------
+
+# Remap Microsoft Windows PXE requests
+re ^pxeboot\.n12 packages/windows/pe/pxeboot.n12
+re ^pxeboot\.com packages/windows/pe/pxeboot.com
+re ^pxeboot\.0 packages/windows/pe/pxeboot.n12
+re ^bootmgr\.exe packages/windows/pe/bootmgr.exe
+r ^\\Boot\\ packages/windows/pe/
+r ^\\boot\\ packages/windows/pe/
+r ^Boot/ packages/windows/pe/
+r ^boot/ packages/windows/pe/
+r ^/boot/ packages/windows/pe/
+r ^\\ packages/windows/pe/
+rg \\ /
+
+#------------------------------------------------------------------------------
+# Default mappings 
+#------------------------------------------------------------------------------
+
+# Remap all UUID to default menu
+re ^pxelinux\.cfg/[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12} pxelinux.cfg/default
+
+# Remap all MAC to default menu
+#re ^pxelinux\.cfg/([a-f0-9]{2}-){6}[a-f0-9]{2} pxelinux.cfg/default
+
+# Remap all IP to default menu
+#re ^pxelinux\.cfg/[A-F0-9]{8} pxelinux.cfg/default
+

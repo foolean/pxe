@@ -1,0 +1,22 @@
+# PXE default menu
+#
+DEFAULT /vesamenu.c32
+PROMPT 0
+
+MENU TITLE PXE Server: Main
+MENU INCLUDE /pxelinux.cfg/graphics.cfg
+
+MENU INCLUDE /pxelinux.cfg/menu/operating-systems.menu
+
+LABEL void
+    MENU LABEL
+
+LABEL void
+    MENU LABEL [ Tools ]
+
+ LABEL dban
+    MENU LABEL DBAN......... Secure drive wiping
+    KERNEL /vesamenu.c32
+    APPEND /pxelinux.cfg/graphics.conf /pxelinux.cfg/menu/tools/dban.menu
+
+MENU INCLUDE /pxelinux.cfg/menu/tools/memtest.menu
