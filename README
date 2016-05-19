@@ -1,8 +1,9 @@
-unattended-os-install
-=====================
+PXE Services
+============
 
 A collection of files (e.g. preseed, kickstart, autoyast) for unattended
-installs of various operating systems.
+PXE installs of various operating systems.
+
 
 Usage
 =====
@@ -19,3 +20,20 @@ Example:
 
 The various netboot images can be downloaded once the basic structure is
 established.
+
+
+Manual Setup/Installation
+=========================
+
+The following set of instructions will set up your server to provide PXE
+installation services.
+
+    [ debian ]
+    cd /opt/pxe/tftp
+    apt-get -y install pxelinux syslinux-common memtest86+
+    ln -s /usr/lib/syslinux/memdisk .
+    ln -s /usr/lib/syslinux/modules/bios/menu.c32 .
+    ln -s /usr/lib/syslinux/modules/bios/vesamenu.c32 .
+    ln -s /usr/lib/PXELINUX/pxelinux.0 .
+    mkdir packages/memtest
+    ln -s /usr/share/lintian/overrides/memtest86+ packages/memtest/
