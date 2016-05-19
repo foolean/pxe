@@ -1,0 +1,8 @@
+# Files that will be symlinked to the OS's copy
+memdisk
+menu.c32
+pxelinux.0
+vesamenu.c32
+
+# The 'packages' directory will be dynamically built
+packages/
