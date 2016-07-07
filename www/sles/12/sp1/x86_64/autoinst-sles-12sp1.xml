@@ -516,10 +516,11 @@ RAID_TOTAL=$(( ${RAID_DISKS} + ${RAID_SPARES} ))
 XML_FILE="/tmp/physical-layout.xml"
 
 if [ "${RAID_TOTAL}" == "1" ]; then
+    DISK=$(lsblk -io NAME | grep "^[a-z]" | egrep -v "^(loop|sr|fd)" | sort -u | head -n ${RAID_TOTAL})
     cat << RAID_1_EOF > "${XML_FILE}"
-        <!-- single drive configuration (RAID_TOTAL = ${RAID_TOTAL}) -->
+        <!-- single drive configuration (RAID_TOTAL = ${RAID_TOTAL}, DISK = ${DISK}) -->
         <drive>
-            <device>/dev/sda</device>
+            <device>/dev/${DISK}</device>
             <disklabel>msdos</disklabel>
             <enable_snapshots config:type="boolean">true</enable_snapshots>
             <initialize config:type="boolean">true</initialize>
