@@ -44,7 +44,7 @@ LOGGER="/usr/bin/logger -it \"$(basename $0)\""
 
 # Get the list of active OpenBSD releases
 RELEASE_LIST=$(wget -qO - http://ftp.openbsd.org/pub/OpenBSD | \
-    grep "folder" | sed -e 's/^.*">//' -e 's/\/<.*//'        | \
+    grep "href=\"[0-9]" | sed -e 's/^.*">//' -e 's/\/<.*//'  | \
     grep "^[0-9]" | sort -u | sed -e ':a;N;$!ba;s/\n/ /g')
 
 # debug - helper routine to print debugging messages
