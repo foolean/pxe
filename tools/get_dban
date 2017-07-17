@@ -65,7 +65,7 @@ usage() {
 }
 
 # Parse command-line arguments
-while getopts "dhp:v" OPTION
+while getopts "dg:ho:p:v" OPTION
 do
     case $OPTION in
         d)
