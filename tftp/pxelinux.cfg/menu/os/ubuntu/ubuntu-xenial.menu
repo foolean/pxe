@@ -1,0 +1,92 @@
+PROMPT 0
+
+MENU TITLE Ubuntu: Ubuntu Xenial
+MENU INCLUDE /pxelinux.cfg/graphics.cfg
+
+LABEL void
+    MENU LABEL [ amd64 Preseed Installation ]
+
+LABEL ubuntu_xenial_amd64_single_crypto
+    MENU LABEL Ubuntu Xenial (amd64) - (single+crypto)
+    KERNEL /packages/ubuntu/xenial/amd64/linux
+    APPEND initrd=/packages/ubuntu/xenial/amd64/initrd.gz preseed/url=http://pxe/install/ubuntu/xenial/preseed-xenial-cis.cfg locale=en_US keymap=us priority=critical raiddisks=1 crypto=1 initdaemon=sysvinit interface=auto .
+    TEXT HELP
+    Ubuntu Xenial, amd64, Single disk, FDE
+    ENDTEXT
+
+LABEL ubuntu_xenial_amd64_single
+    MENU LABEL Ubuntu Xenial (amd64) - (single)
+    KERNEL /packages/ubuntu/xenial/amd64/linux
+    APPEND initrd=/packages/ubuntu/xenial/amd64/initrd.gz preseed/url=http://pxe/install/ubuntu/xenial/preseed-xenial-cis.cfg locale=en_US keymap=us priority=critical raiddisks=1 initdaemon=sysvinit interface=auto .
+    TEXT HELP
+    Ubuntu Xenial, amd64, Single disk
+    ENDTEXT
+
+LABEL ubuntu_xenial_amd64_raid1
+    MENU LABEL Ubuntu Xenial (amd64) - (raid-1)
+    KERNEL /packages/ubuntu/xenial/amd64/linux
+    APPEND initrd=/packages/ubuntu/xenial/amd64/initrd.gz preseed/url=http://pxe/install/ubuntu/xenial/preseed-xenial-cis.cfg locale=en_US keymap=us priority=critical raidtype=1 initdaemon=sysvinit interface=auto .
+    TEXT HELP
+    Ubuntu Xenial, amd64, RAID-1 over all disks
+    ENDTEXT
+
+LABEL ubuntu_xenial_amd64_raid1_2+0
+    MENU LABEL Ubuntu Xenial (amd64) - (raid-1 2+0)
+    KERNEL /packages/ubuntu/xenial/amd64/linux
+    APPEND initrd=/packages/ubuntu/xenial/amd64/initrd.gz preseed/url=http://pxe/install/ubuntu/xenial/preseed-xenial-cis.cfg locale=en_US keymap=us priority=critical raidtype=1 raiddisks=2 raidspares=0 initdaemon=sysvinit interface=auto .
+    TEXT HELP
+    Ubuntu Xenial, amd64, RAID-1 over first two disks
+    ENDTEXT
+
+LABEL ubuntu_xenial_amd64_raid5
+    MENU LABEL Ubuntu Xenial (amd64) - (raid-5)
+    KERNEL /packages/ubuntu/xenial/amd64/linux
+    APPEND initrd=/packages/ubuntu/xenial/amd64/initrd.gz preseed/url=http://pxe/install/ubuntu/xenial/preseed-xenial-cis.cfg locale=en_US keymap=us priority=critical raidtype=5 initdaemon=sysvinit interface=auto .
+    TEXT HELP
+    Ubuntu Xenial, amd64, RAID-5 over all disks
+    ENDTEXT
+
+LABEL ubuntu_xenial_amd64_raid6
+    MENU LABEL Ubuntu Xenial (amd64) - (raid-6)
+    KERNEL /packages/ubuntu/xenial/amd64/linux
+    APPEND initrd=/packages/ubuntu/xenial/amd64/initrd.gz preseed/url=http://pxe/install/ubuntu/xenial/preseed-xenial-cis.cfg locale=en_US keymap=us priority=critical raidtype=6 initdaemon=sysvinit interface=auto .
+    TEXT HELP
+    Ubuntu Xenial, amd64, RAID-6 over all disks
+    ENDTEXT
+
+LABEL ubuntu_xenial_amd64_raid10
+    MENU LABEL Ubuntu Xenial (amd64) - (raid-10)
+    KERNEL /packages/ubuntu/xenial/amd64/linux
+    APPEND initrd=/packages/ubuntu/xenial/amd64/initrd.gz preseed/url=http://pxe/install/ubuntu/xenial/preseed-xenial-cis.cfg locale=en_US keymap=us priority=critical raidtype=10 initdaemon=sysvinit interface=auto .
+    TEXT HELP
+    Ubuntu Xenial, amd64, RAID-10 over all disks
+    ENDTEXT
+
+LABEL void
+    MENU LABEL
+
+LABEL void
+    MENU LABEL [ Manual Installation ]
+
+LABEL ubuntu_xenial_amd64_manual
+    MENU LABEL Ubuntu Xenial (amd64) - (manual)
+    KERNEL /packages/ubuntu/xenial/amd64/linux
+    APPEND initrd=/packages/ubuntu/xenial/amd64/initrd.gz 
+    TEXT HELP
+    Manual installation of Ubuntu Xenial amd64
+    ENDTEXT
+
+LABEL void
+    MENU LABEL
+
+LABEL Ubuntu Menu
+    MENU LABEL Return to ^Ubuntu Menu
+    MENU DEFAULT
+    KERNEL /vesamenu.c32
+    APPEND /pxelinux.cfg/menu/ubuntu.menu
+
+LABEL Main Menu
+    MENU LABEL Return to ^Main Menu
+    KERNEL /vesamenu.c32
+    APPEND /pxelinux.cfg/default
+
