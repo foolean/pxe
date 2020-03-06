@@ -41,9 +41,9 @@ MIRROR="http://mirror.centos.org"
 
 # Get the list of active CentOS releases
 CENTOS_FILE_LIST="${MIRROR}/centos/filelist.gz"
-RELEASE_LIST=$(wget -qO- "${CENTOS_FILE_LIST}" | \
-                zgrep "os/.*/images/pxeboot$"  | \
-                cut -f2 -d/ | cut -f1 -d.      | \
+RELEASE_LIST=$(wget -qO- "${CENTOS_FILE_LIST}"          | \
+                zgrep "os.*/images/pxeboot$"            | \
+                cut -f2 -d/ | cut -f1 -d. | cut -f1 -d- | \
                 sort -u | sed -e ':a;N;$!ba;s/\n/ /g')
 
 # debug - helper routine to print debugging messages
@@ -161,7 +161,12 @@ do
         debug "Getting netboot images for ${RELEASE} ${ARCH}"
 
         # Source path to the netboot images
-        IMAGE_SRC="${MIRROR}/centos/${RELEASE}/os/${ARCH}/images/pxeboot/"
+        if [ ${RELEASE} -lt 8 ]
+        then
+            IMAGE_SRC="${MIRROR}/centos/${RELEASE}/os/${ARCH}/images/pxeboot/"
+        else
+            IMAGE_SRC="${MIRROR}/centos/${RELEASE}/BaseOS/${ARCH}/os/images/pxeboot/"
+        fi
 
         # Destination path for the release images
         RELEASE_DIR="${PKGDIR}/${OSNAME}/${RELEASE}/${ARCH}"
