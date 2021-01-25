@@ -85,7 +85,8 @@ done
 
 # Ensure our package directory exists
 mkdir -p "${PKGDIR}"
-chmod -R u-w,u+rX,go-rwx "${PKGDIR}"
+chmod -R u-wx,u+rwX,go-rwx "${PKGDIR}"
+
 
 # Path to the source
 IMAGE_SRC="http://sourceforge.net/projects/dban/files/latest/download"

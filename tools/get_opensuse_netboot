@@ -145,7 +145,7 @@ debug "PRUNE        = ${PRUNE}"
 
 # Ensure our package directory exists
 mkdir -p "${PKGDIR}"
-chmod -R u-w,u+rX,go-rwx "${PKGDIR}"
+chmod -R u-wx,u+rwX,go-rwx "${PKGDIR}"
 
 # Release loop: Iterate over the list of releases
 for RELEASE in ${RELEASE_LIST}

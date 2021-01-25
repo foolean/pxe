@@ -147,7 +147,8 @@ debug "PRUNE        = ${PRUNE}"
 
 # Ensure our package directory exists
 mkdir -p "${PKGDIR}"
-chmod -R u-w,u+rX,go-rwx "${PKGDIR}"
+chmod -R u-wx,u+rwX,go-rwx "${PKGDIR}"
+
 
 # Release loop: Iterate over the list of releases
 for RELEASE in ${RELEASE_LIST}
@@ -191,7 +192,7 @@ done;   # Release loop
 
 # Set owner and permissions on the directories and files
 chown -R ${USER}:${GROUP}   "${PKGDIR}/${OSNAME}"
-chmod -R go-rwx             "${PKGDIR}/${OSNAME}"
+chmod -R ugo-rwx            "${PKGDIR}/${OSNAME}"
 chmod -R u+rwX              "${PKGDIR}/${OSNAME}"
 
 # Prune directories not part of the current release list

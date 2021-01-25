@@ -85,7 +85,7 @@ done
 
 # Ensure our package directory exists
 mkdir -p "${PKGDIR}"
-chmod -R u-w,u+rX,go-rwx "${PKGDIR}"
+chmod -R u-w,u+rwX,go-rwx "${PKGDIR}"
 
 # Path to the source
 IMAGE_SRC="http://www.memtest.org/download/4.20/memtest86+-4.20.bin.gz"
@@ -107,5 +107,4 @@ gunzip "${RELEASE_DIR}/memtest86+.gz"
 
 # Set owner and permissions on the directories and files
 chown -R ${USER}:${GROUP}   "${PKGDIR}/${OSNAME}"
-chmod -R go-rwx             "${PKGDIR}/${OSNAME}"
-chmod -R u+rwX              "${PKGDIR}/${OSNAME}"
+chmod -R u-wx,u+rX,go-rwx   "${PKGDIR}/${OSNAME}"
