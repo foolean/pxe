@@ -94,32 +94,32 @@ usage() {
 while getopts "a:dhf:g:r:o:p:Pv" OPTION
 do
     case $OPTION in
-        a) 
+        a)
             ARCH_LIST=$(echo $OPTARG | tr '[:upper:]' '[:lower:]');;
-        d) 
+        d)
             DEBUG=1
             VERBOSE=1
             PROGRESS="--progress"
             ;;
         f)
             FIRMWARE_LIST=$(echo $OPTARG | tr '[:upper:]' '[:lower:]');;
-        g) 
+        g)
             GROUP=$OPTARG;;
-        o) 
+        o)
             USER=$OPTARG;;
-        p) 
+        p)
             PKGDIR=${OPTARG};;
-        P) 
+        P)
             PRUNE=1;;
-        r) 
+        r)
             RELEASE_LIST=$(echo $OPTARG | tr '[:upper:]' '[:lower:]')
             CUSTOM_RELEASE_LIST=1
             ;;
-        v) 
+        v)
             VERBOSE=1
             WGET_VERBOSE="--progress=bar"
             ;;
-        ?) 
+        ?)
             usage;;
     esac
 done
@@ -139,7 +139,7 @@ if [ ${ERROR} -eq 1 ]; then
 fi
 
 # Debugging output
-debug "ARCH_LIST     = ${ARCH_LIST}" 
+debug "ARCH_LIST     = ${ARCH_LIST}"
 debug "FIRMWARE_LIST = ${FIRMWARE_LIST}"
 debug "RELEASE_LIST  = ${RELEASE_LIST}"
 debug "USER          = ${USER}"
@@ -169,13 +169,13 @@ do
         # Create the destination directory for the firmware
         debug "Creating '${FIRMWARE_DIR}'"
         mkdir -p "${FIRMWARE_DIR}"
-    
+
         # Download the firmware
         notice "Downloading '${FIRMWARE_SRC}'"
         wget "${WGET_VERBOSE}"                                           \
             -O "${PKGDIR}/${OSNAME}/${RELEASE}/firmware/firmware.tar.gz" \
             "${FIRMWARE_SRC}"
-    
+
         # Unpack the firmware
         if [ -f "${PKGDIR}/${OSNAME}/${RELEASE}/firmware/firmware.tar.gz" ]
         then
@@ -195,6 +195,7 @@ do
 
         # Source path to the netboot images
         IMAGE_SRC="http://ftp.ubuntu.com/ubuntu/dists/${RELEASE}/main/installer-${ARCH}/current/images/netboot/ubuntu-installer/${ARCH}/"
+        IMAGE_SRC2="http://ftp.ubuntu.com/ubuntu/dists/${RELEASE}/main/installer-${ARCH}/current/legacy-images/netboot/ubuntu-installer/${ARCH}/"
 
         # Destination path for the release images
         RELEASE_DIR="${PKGDIR}/${OSNAME}/${RELEASE}/${ARCH}"
@@ -207,36 +208,42 @@ do
         for IMAGE_FILE in ${IMAGE_FILES}
         do
             debug "Dowloading ${IMAGE_FILE} for ${RELEASE} ${ARCH}"
-        
+
             # Download the image file
             notice "Downloading '${IMAGE_SRC}/${IMAGE_FILE}'"
             wget "${WGET_VERBOSE}"  \
                 -O "${RELEASE_DIR}/${IMAGE_FILE}" "${IMAGE_SRC}/${IMAGE_FILE}"
+            if [ $? -ne 0 ]
+            then
+                wget "${WGET_VERBOSE}"  \
+                    -O "${RELEASE_DIR}/${IMAGE_FILE}" "${IMAGE_SRC2}/${IMAGE_FILE}"
+                echo $?
+            fi
 
             # Process the firmware list creating initrd+firmware.gz
             if [ "${IMAGE_FILE}" == "initrd.gz" ]; then
                 if [ "${FIRMWARE_LIST}" != "" ]; then
                     debug "Adding firmware to initrd.gz"
-        
+
                     # Working directory for adding firmware into the image
                     RELEASE_TEMP_DIR="${RELEASE_DIR}/temp"
-        
+
                     # Create the firmware working directory for this release
                     debug "Creating '${RELEASE_TEMP_DIR}'"
                     mkdir "${RELEASE_TEMP_DIR}"
-        
+
                     # Change into the firmware working directory
                     cd "${RELEASE_TEMP_DIR}"
-        
+
                     # Unpack the image file
                     debug "Unpacking ${RELEASE_DIR}/initrd.gz"
                     zcat ../initrd.gz | cpio -i
-        
+
                     # Iterate over the list of firmware adding them to the image
                     for FIRMWARE in ${FIRMWARE_LIST}
                     do
                         notice "Adding firmware '${FIRMWARE}' to ${RELEASE} ${ARCH} image"
-        
+
                         # Get the full path to the firmware we're adding
                         FIRMWARE_FILE=$(find "${FIRMWARE_DIR}" -type f \
                             -name "firmware-${FIRMWARE}_*_all.deb")
@@ -246,7 +253,7 @@ do
                             dpkg-deb -x "${FIRMWARE_FILE}" .
                         fi
                     done;   # Firmware loop
-        
+
                     # Compress the resulting image into initrd+firmware.gz
                     notice "Compress image as ${RELEASE_DIR}/initrd+firmware.gz"
                     find . -print0 | cpio -0 -H newc -o | \
@@ -290,7 +297,7 @@ if [ ${CUSTOM_RELEASE_LIST} -eq 0 ] && [ ${PRUNE} -eq 1 ]; then
     debug "EOL_RELEASES = '${EOL_RELEASES}'"
 
     for EOL_RELEASE in ${EOL_RELEASES}
-    do 
+    do
         notice "Cleaning up EOL/EOS release '${EOL_RELEASE}'"
         rm -rf "${PKGDIR}/${OSNAME}/${EOL_RELEASE}"
     done
